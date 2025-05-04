@@ -5,7 +5,11 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 
 // Load environment variables
-dotenv.config();
+if (process.env.NODE_ENV === 'development') {
+  dotenv.config({ path: '.env.local' });
+} else {
+  dotenv.config();
+}
 
 const app = express();
 
