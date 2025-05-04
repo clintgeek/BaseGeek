@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: geek-suite-mongo
+    ports:
+      - "27018:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=ngeek_usr_f8z3k9b1
+      - MONGO_INITDB_ROOT_PASSWORD=NotePass_ngk_7Hq-pLm5sRzYtW2_K
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - geek_suite_network
+    restart: unless-stopped
+
+  redis:
+    image: redis:latest
+    container_name: geek-suite-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - geek_suite_network
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  geek_suite_network:
+    driver: bridge

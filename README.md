@@ -11,7 +11,7 @@ The foundational infrastructure that powers the entire geekSuite ecosystem:
 - Core infrastructure and shared utilities
 - Cross-application communication layer
 - Security and compliance framework
-- Integration with planned services (dbGeek, LoginGeek, aiGeek, BackupGeek)
+- Integration with planned services (DataGeek, LoginGeek, aiGeek, BackupGeek)
 - Common components and shared libraries
 
 ### FitnessGeek
@@ -38,15 +38,31 @@ A digital bullet journaling system for the modern world:
 - Collections and indexes
 - Digital-first organization
 
-## Future Plans
+### DataGeek
+DataGeek provides centralized data services for the GeekSuite ecosystem, including:
 
-### dbGeek
-The centralized data management system:
-- Hosts PostgreSQL and MongoDB instances
-- Provides a unified dashboard for data management
-- Enables cross-application data sharing
-- Offers data visualization and analytics
-- Implements robust backup and recovery systems
+#### Database Services
+- Shared MongoDB instance for persistent data storage
+- Database proxy services for optimized connections
+- Connection pooling and management
+- Query optimization and caching
+- Cross-application data sharing capabilities
+
+#### Caching & Real-time Services
+- Shared Redis instance for caching and real-time features
+- Session management across applications
+- Real-time data synchronization
+- Pub/sub messaging system
+- Rate limiting and request throttling
+
+#### Security & Management
+- Centralized access control
+- Database monitoring and metrics
+- Backup and recovery services
+- Query analysis and optimization
+- Security auditing and logging
+
+## Future Plans
 
 ### LoginGeek
 The central authentication and user management system:
