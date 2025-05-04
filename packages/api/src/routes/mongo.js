@@ -4,7 +4,7 @@ import { MongoClient } from 'mongodb';
 const router = Router();
 
 // MongoDB connection details from docker-compose.yml
-const MONGODB_URI = 'mongodb://datageek_admin:DataGeek_Admin_2024@192.168.1.17:27018/datageek?authSource=admin';
+const MONGODB_URI = 'mongodb://datageek_user:DataGeek_User_2024@192.168.1.17:27018/datageek?authSource=admin';
 const DB_NAME = 'datageek';
 
 router.get('/status', async (req, res) => {

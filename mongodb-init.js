@@ -1,8 +1,9 @@
 db = db.getSiblingDB('admin');
 
+// Create a user for the datageek database
 db.createUser({
-  user: "datageek_admin",
-  pwd: "DataGeek_Admin_2024",
+  user: "datageek_user",
+  pwd: "DataGeek_User_2024",
   roles: [
     { role: "readWrite", db: "datageek" },
     { role: "dbAdmin", db: "datageek" }
