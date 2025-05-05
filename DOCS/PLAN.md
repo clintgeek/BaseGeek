@@ -203,3 +203,16 @@ DELETE /api/v1/backups/:id       // Delete backup
 8. Create management UI
 9. Add monitoring and logging
 10. Set up backup system
+
+
+
+### App List
+- baseGeek:
+   - dataGeek: host/monitor mongo, postgres, redis, and possibly mariaDB instances with native and API interfaces
+   - userGeek: manage users, user profiles, and SSO across all geekApps
+   - msgGeek: API for sending push notifications, email, and sms messages
+   - backupGeek: centralized geekSuite backup system
+   - aiGeek: AI services configuration tool and API for geekSuite apps
+- fitnessGeek: MyFitnessPal / LoseIt! inspired food and health tracking
+- noteGeek: note app supporting rich text, markdown, code, handwritten, and mind map notes
+- bujoGeek: digital bullet journaling and todo list manager

@@ -27,6 +27,21 @@ services:
       - datageek_network
     restart: unless-stopped
 
+  postgres:
+    image: postgres:15
+    container_name: datageek_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=datageek_pg_admin
+      - POSTGRES_PASSWORD=DataGeek_PG_2024
+      - POSTGRES_DB=datageek
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - datageek_network
+    restart: unless-stopped
+
 volumes:
   mongodb_data:
   redis_data:
