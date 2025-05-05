@@ -42,6 +42,24 @@ services:
       - datageek_network
     restart: unless-stopped
 
+  basegeek_app:
+    build: .
+    container_name: basegeek_app
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - PORT=8987
+    ports:
+      - "8987:8987"
+    depends_on:
+      - mongodb
+      - redis
+      - postgres
+    networks:
+      - datageek_network
+    restart: unless-stopped
+
 volumes:
   mongodb_data:
   redis_data:

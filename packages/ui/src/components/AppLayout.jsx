@@ -20,17 +20,20 @@ import AppsOutlinedIcon from '@mui/icons-material/AppsOutlined';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import StorageOutlinedIcon from '@mui/icons-material/StorageOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import LogoutIcon from '@mui/icons-material/Logout';
+import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const drawerMenuItems = [
   { label: 'baseGeek', icon: DashboardOutlinedIcon, path: '/' },
   { label: 'dataGeek', icon: StorageOutlinedIcon, path: '/datageek' },
-  { label: 'Settings', icon: SettingsOutlinedIcon, path: '/settings' },
+  { label: 'userGeek', icon: PeopleOutlinedIcon, path: '/usergeek' },
 ];
 
 const bottomNavItems = [
   { label: 'baseGeek', icon: DashboardOutlinedIcon, path: '/' },
   { label: 'dataGeek', icon: StorageOutlinedIcon, path: '/datageek' },
+  { label: 'userGeek', icon: PeopleOutlinedIcon, path: '/usergeek' },
   { label: 'Settings', icon: SettingsOutlinedIcon, path: '/settings' },
 ];
 
@@ -51,6 +54,12 @@ export default function AppLayout({ children }) {
   if (bottomNav !== currentNavIndex && currentNavIndex !== -1) {
     setTimeout(() => setBottomNav(currentNavIndex), 0);
   }
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/login');
+    setDrawerOpen(false);
+  };
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: 'background.default', position: 'relative' }}>
@@ -95,8 +104,21 @@ export default function AppLayout({ children }) {
                 <ListItemText primary={item.label} />
               </ListItem>
             ))}
-            <Divider />
-            {/* Add more drawer items here if needed */}
+          </List>
+          <Divider sx={{ my: 1 }} />
+          <List>
+            <ListItem button onClick={handleLogout}>
+              <ListItemIcon>
+                <LogoutIcon />
+              </ListItemIcon>
+              <ListItemText primary="Logout" />
+            </ListItem>
+            <ListItem button onClick={() => { navigate('/settings'); setDrawerOpen(false); }}>
+              <ListItemIcon>
+                <SettingsOutlinedIcon />
+              </ListItemIcon>
+              <ListItemText primary="Settings" />
+            </ListItem>
           </List>
         </Box>
       </Drawer>

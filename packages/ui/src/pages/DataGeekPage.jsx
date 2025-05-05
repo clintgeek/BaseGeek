@@ -87,11 +87,95 @@ function RedisStatus() {
   );
 }
 
-function PostgresStatusPlaceholder() {
+function formatPostgresUptime(uptime) {
+  if (!uptime) return '';
+  if (typeof uptime === 'string') return uptime;
+  if (typeof uptime === 'object') {
+    // Try to join all values (e.g., { hours: 1, minutes: 2, seconds: 3 })
+    return Object.entries(uptime)
+      .map(([k, v]) => `${v} ${k}`)
+      .join(' ');
+  }
+  return String(uptime);
+}
+
+function PostgresStatus() {
+  const [status, setStatus] = useState({
+    isLoading: true,
+    isConnected: false,
+    error: null,
+    version: null,
+    uptime: null,
+    dbSize: null,
+    connectionCount: null
+  });
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const response = await axios.get('/api/postgres/status');
+        setStatus({
+          isLoading: false,
+          isConnected: response.data.status === 'connected',
+          error: null,
+          version: response.data.version,
+          uptime: response.data.uptime,
+          dbSize: response.data.dbSize,
+          connectionCount: response.data.connectionCount
+        });
+      } catch (error) {
+        setStatus({
+          isLoading: false,
+          isConnected: false,
+          error: error.response?.data?.message || error.message,
+          version: null,
+          uptime: null,
+          dbSize: null,
+          connectionCount: null
+        });
+      }
+    };
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (status.isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" p={3}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
-    <Paper sx={{ p: 3 }}>
-      Postgres Monitoring (coming soon...)
-    </Paper>
+    <Card variant="outlined">
+      <CardContent>
+        <Typography variant="h6" gutterBottom>
+          Postgres Status
+        </Typography>
+        <Typography color={status.isConnected ? "success.main" : "error.main"} variant="subtitle1">
+          {status.isConnected ? "Connected" : "Disconnected"}
+        </Typography>
+        {status.error && (
+          <Typography color="error" variant="body2">
+            Error: {status.error}
+          </Typography>
+        )}
+        {status.isConnected && (
+          <Grid container spacing={2} mt={2}>
+            <Grid item xs={6}>
+              <Typography variant="body2">Version: {status.version}</Typography>
+              <Typography variant="body2">Uptime: {formatPostgresUptime(status.uptime)}</Typography>
+            </Grid>
+            <Grid item xs={6}>
+              <Typography variant="body2">DB Size: {status.dbSize}</Typography>
+              <Typography variant="body2">Connections: {status.connectionCount}</Typography>
+            </Grid>
+          </Grid>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -108,7 +192,7 @@ export default function DataGeekPage() {
       </Paper>
       {tab === 0 && <MongoStatus />}
       {tab === 1 && <RedisStatus />}
-      {tab === 2 && <PostgresStatusPlaceholder />}
+      {tab === 2 && <PostgresStatus />}
     </Box>
   );
 }

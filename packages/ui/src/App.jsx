@@ -4,6 +4,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import AppLayout from './components/AppLayout';
 import BaseGeekHome from './pages/BaseGeekHome';
 import DataGeekPage from './pages/DataGeekPage';
+import LoginPage from './pages/LoginPage';
+import UserGeekPage from './pages/UserGeekPage';
 import { Box, Typography, Paper } from '@mui/material';
 import theme from './theme';
 
@@ -27,13 +29,22 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <BrowserRouter>
-        <AppLayout>
-          <Routes>
-            <Route path="/" element={<BaseGeekHome />} />
-            <Route path="/datageek" element={<DataGeekPage />} />
-            <Route path="/settings" element={<SettingsPlaceholder />} />
-          </Routes>
-        </AppLayout>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/*"
+            element={
+              <AppLayout>
+                <Routes>
+                  <Route path="/" element={<BaseGeekHome />} />
+                  <Route path="/datageek" element={<DataGeekPage />} />
+                  <Route path="/usergeek" element={<UserGeekPage />} />
+                  <Route path="/settings" element={<SettingsPlaceholder />} />
+                </Routes>
+              </AppLayout>
+            }
+          />
+        </Routes>
       </BrowserRouter>
     </ThemeProvider>
   );
