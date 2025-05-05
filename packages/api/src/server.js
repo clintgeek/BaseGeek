@@ -48,7 +48,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`API server running on port ${PORT}`);
   console.log(`Health check available at http://localhost:${PORT}/api/health`);
   console.log(`MongoDB status available at http://localhost:${PORT}/api/mongo/status`);
