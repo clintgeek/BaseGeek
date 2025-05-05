@@ -60,6 +60,22 @@ services:
       - datageek_network
     restart: unless-stopped
 
+  basegeek_ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    container_name: basegeek_ui
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - PORT=8988
+    ports:
+      - "8988:8988"
+    networks:
+      - datageek_network
+    restart: unless-stopped
+
 volumes:
   mongodb_data:
   redis_data:
