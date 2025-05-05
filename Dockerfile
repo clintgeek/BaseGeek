@@ -1,26 +1,43 @@
-# 1. Base image
-FROM node:20-alpine AS base
+# 1. Build stage
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# 2. Copy root files and install root dependencies (if any)
+# Copy package manifests
 COPY package*.json ./
-
-# 3. Install dependencies for API and UI
 COPY packages/api/package*.json ./packages/api/
 COPY packages/ui/package*.json ./packages/ui/
-RUN cd packages/api && npm install --production
-RUN cd packages/ui && npm install --production
 
-# 4. Copy all source code
+# Install all dependencies (including devDependencies)
+RUN cd packages/api && npm install
+RUN cd packages/ui && npm install
+
+# Copy all source code
 COPY . .
 
-# 5. Build the frontend
+# Build the frontend
 RUN cd packages/ui && npm run build
 
-# 6. Expose the port
+# 2. Production stage
+FROM node:20-alpine AS prod
+
+WORKDIR /app
+
+# Copy only production node_modules for API
+COPY --from=build /app/packages/api/node_modules ./packages/api/node_modules
+
+# Copy built UI
+COPY --from=build /app/packages/ui/dist ./packages/ui/dist
+
+# Copy API source
+COPY packages/api ./packages/api
+
+# Copy any root files needed (env, etc.)
+COPY package*.json ./
+
+# Expose the port
 EXPOSE 8987
 
-# 7. Start the API (which should serve the built UI)
+# Start the API
 WORKDIR /app/packages/api
 CMD ["npm", "start"]
