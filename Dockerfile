@@ -21,23 +21,22 @@ RUN cd packages/ui && npm run build
 # 2. Production stage
 FROM node:20-alpine AS prod
 
-WORKDIR /app
+WORKDIR /app/packages/api
 
-# Copy only production node_modules for API
-COPY --from=build /app/packages/api/node_modules ./packages/api/node_modules
+# Copy API package files
+COPY packages/api/package*.json ./
 
-# Copy built UI
-COPY --from=build /app/packages/ui/dist ./packages/ui/dist
+# Install only production dependencies for API
+RUN npm install --production
 
 # Copy API source
-COPY packages/api ./packages/api
+COPY packages/api .
 
-# Copy any root files needed (env, etc.)
-COPY package*.json ./
+# Copy built UI to the expected location
+COPY --from=build /app/packages/ui/dist ./../ui/dist
 
 # Expose the port
 EXPOSE 8987
 
 # Start the API
-WORKDIR /app/packages/api
 CMD ["npm", "start"]
