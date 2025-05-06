@@ -31,7 +31,7 @@ app.use((req, res, next) => {
 app.use('/api/mongo', mongoRoutes);
 app.use('/api/redis', redisRoutes);
 app.use('/api/postgres', postgresRoutes);
-app.use('/api/user', userRoutes);
+app.use('/api/users', userRoutes);
 
 // Basic health check
 app.get('/api/health', (req, res) => {
@@ -54,5 +54,5 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`MongoDB status available at http://localhost:${PORT}/api/mongo/status`);
   console.log(`Redis status available at http://localhost:${PORT}/api/redis/status`);
   console.log(`Postgres status available at http://localhost:${PORT}/api/postgres/status`);
-  console.log(`User API available at http://localhost:${PORT}/api/user/`);
+  console.log(`User API available at http://localhost:${PORT}/api/users/`);
 });
