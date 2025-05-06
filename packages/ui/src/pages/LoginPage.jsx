@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Box, Paper, Tabs, Tab, TextField, Button, Typography, Alert, Divider } from '@mui/material';
 import AppsOutlinedIcon from '@mui/icons-material/AppsOutlined';
 import { useNavigate } from 'react-router-dom';
-import useAuthStore from '../store/authStore';
+import useAuthStore from '../store/authStore.js';
 
 export default function LoginPage() {
   const [tab, setTab] = useState(0); // 0 = Login, 1 = Register

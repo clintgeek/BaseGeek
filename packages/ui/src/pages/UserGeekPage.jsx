@@ -2,18 +2,19 @@ import { useEffect, useState } from 'react';
 import { Box, Paper, Typography, List, ListItem, ListItemText, IconButton, CircularProgress, Alert } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
+import useAuthStore from '../store/authStore.js';
 
 export default function UserGeekPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(null);
+  const { token } = useAuthStore();
 
   const fetchUsers = async () => {
     setLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('token');
       const res = await axios.get('/api/users', {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -26,13 +27,16 @@ export default function UserGeekPage() {
     }
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => {
+    if (token) {
+      fetchUsers();
+    }
+  }, [token]);
 
   const handleDelete = async (id) => {
     setDeleting(id);
     setError('');
     try {
-      const token = localStorage.getItem('token');
       await axios.delete(`/api/users/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -44,6 +48,16 @@ export default function UserGeekPage() {
       setDeleting(null);
     }
   };
+
+  if (!token) {
+    return (
+      <Box>
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Alert severity="error">Please log in to access user management.</Alert>
+        </Paper>
+      </Box>
+    );
+  }
 
   return (
     <Box>

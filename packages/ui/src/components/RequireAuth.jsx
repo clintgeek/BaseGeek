@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import useAuthStore from '../store/authStore';
+import useAuthStore from '../store/authStore.js';
 
 const RequireAuth = ({ children }) => {
   const { isAuthenticated, hydrateUser } = useAuthStore();

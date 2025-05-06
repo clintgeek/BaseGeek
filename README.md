@@ -6,7 +6,7 @@ geekSuite is a comprehensive platform that brings together various productivity 
 
 ## Components
 
-### BaseGeek
+### baseGeek
 The foundational infrastructure that powers the entire geekSuite ecosystem:
 - Core infrastructure and shared utilities
 - Cross-application communication layer

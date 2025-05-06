@@ -64,7 +64,7 @@ export default function AppLayout({ children }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: 'background.default', position: 'relative' }}>
       {/* Header */}
-      <AppBar position="fixed" sx={{ bgcolor: 'primary.main', zIndex: (theme) => theme.zIndex.drawer + 1, height: 60 }}>
+      <AppBar position="fixed" sx={{ bgcolor: '#6098CC', zIndex: (theme) => theme.zIndex.drawer + 1, height: 60 }}>
         <Toolbar sx={{ height: 60, minHeight: 60 }}>
           <IconButton color="inherit" edge="start" onClick={handleDrawerToggle} sx={{ mr: 1 }}>
             <MenuIcon />

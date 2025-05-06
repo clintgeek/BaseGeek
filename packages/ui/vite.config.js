@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
       manifest: {
-        name: 'DataGeek',
-        short_name: 'DataGeek',
-        description: 'Database Management for GeekSuite',
+        name: 'baseGeek',
+        short_name: 'baseGeek',
+        description: 'Core Infrastructure for GeekSuite',
         theme_color: '#ffffff',
         icons: [
           {
@@ -28,6 +28,9 @@ export default defineConfig({
       }
     })
   ],
+  resolve: {
+    extensions: ['.js', '.jsx', '.json']
+  },
   server: {
     port: 5173,
     proxy: {
