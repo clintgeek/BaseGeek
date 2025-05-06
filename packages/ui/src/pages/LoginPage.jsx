@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, Paper, Tabs, Tab, TextField, Button, Typography, Alert, Divider } from '@mui/material';
 import AppsOutlinedIcon from '@mui/icons-material/AppsOutlined';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import useAuthStore from '../store/authStore';
 
 export default function LoginPage() {
   const [tab, setTab] = useState(0); // 0 = Login, 1 = Register
   const [form, setForm] = useState({ username: '', email: '', password: '' });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login, register, error, isLoading, hydrateUser } = useAuthStore();
+
+  // Hydrate user on mount
+  useEffect(() => {
+    hydrateUser();
+  }, [hydrateUser]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -17,31 +21,22 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setLoading(true);
     try {
       if (tab === 0) {
         // Login
-        const res = await axios.post('/api/users/login', {
-          username: form.username,
-          password: form.password
-        });
-        localStorage.setItem('token', res.data.token);
-        navigate('/');
+        const result = await login(form.username, form.password);
+        if (result.success) {
+          navigate('/');
+        }
       } else {
         // Register
-        const res = await axios.post('/api/users', {
-          username: form.username,
-          email: form.email,
-          password: form.password
-        });
-        localStorage.setItem('token', res.data.token);
-        navigate('/');
+        const result = await register(form.username, form.email, form.password);
+        if (result.success) {
+          navigate('/');
+        }
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.message);
-    } finally {
-      setLoading(false);
+      console.error('Form submission error:', err);
     }
   };
 
@@ -103,7 +98,7 @@ export default function LoginPage() {
             color="primary"
             fullWidth
             sx={{ mt: 3, fontWeight: 'bold', fontSize: 16 }}
-            disabled={loading}
+            disabled={isLoading}
           >
             {tab === 0 ? 'Login' : 'Register'}
           </Button>
