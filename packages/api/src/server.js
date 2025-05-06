@@ -6,6 +6,7 @@ import mongoRoutes from './routes/mongo.js';
 import redisRoutes from './routes/redis.js';
 import postgresRoutes from './routes/postgres.js';
 import userRoutes from './routes/user.js';
+import noteGeekRoutes from './routes/noteGeek.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -32,6 +33,7 @@ app.use('/api/mongo', mongoRoutes);
 app.use('/api/redis', redisRoutes);
 app.use('/api/postgres', postgresRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/notes', noteGeekRoutes);
 
 // Basic health check
 app.get('/api/health', (req, res) => {
@@ -55,4 +57,5 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`Redis status available at http://localhost:${PORT}/api/redis/status`);
   console.log(`Postgres status available at http://localhost:${PORT}/api/postgres/status`);
   console.log(`User API available at http://localhost:${PORT}/api/users/`);
+  console.log(`NoteGeek API available at http://localhost:${PORT}/api/notes/`);
 });
