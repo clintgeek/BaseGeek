@@ -105,10 +105,12 @@ router.post('/', authLimiter, async (req, res) => {
 // @access  Public
 router.post('/login', authLimiter, async (req, res) => {
   try {
-    const { identifier, password } = req.body;
+    // Handle both formats: { identifier, password } or { email/username, password }
+    const { identifier, email, username, password } = req.body;
+    const loginIdentifier = identifier || email || username;
 
     // Validation
-    if (!identifier || !password) {
+    if (!loginIdentifier || !password) {
       return res.status(400).json({
         message: 'Identifier (username or email) and password are required',
         code: 'LOGIN_MISSING_FIELDS'
@@ -118,8 +120,8 @@ router.post('/login', authLimiter, async (req, res) => {
     // Find user by username or email
     const user = await User.findOne({
       $or: [
-        { username: identifier },
-        { email: identifier.toLowerCase() }
+        { username: loginIdentifier },
+        { email: loginIdentifier.toLowerCase() }
       ]
     });
 
