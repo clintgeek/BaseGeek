@@ -22,7 +22,7 @@ export default function LoginPage() {
     try {
       if (tab === 0) {
         // Login
-        const res = await axios.post('/api/user/login', {
+        const res = await axios.post('/api/users/login', {
           username: form.username,
           password: form.password
         });
@@ -30,7 +30,7 @@ export default function LoginPage() {
         navigate('/');
       } else {
         // Register
-        const res = await axios.post('/api/user/register', {
+        const res = await axios.post('/api/users', {
           username: form.username,
           email: form.email,
           password: form.password

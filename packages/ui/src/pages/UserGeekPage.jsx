@@ -14,12 +14,13 @@ export default function UserGeekPage() {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('/api/user/all', {
+      const res = await axios.get('/api/users', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(res.data.users);
     } catch (err) {
-      setError(err.response?.data?.message || err.message);
+      console.error('Error fetching users:', err);
+      setError(err.response?.data?.message || 'Error fetching users');
     } finally {
       setLoading(false);
     }
@@ -32,12 +33,13 @@ export default function UserGeekPage() {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`/api/user/${id}`, {
+      await axios.delete(`/api/users/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setUsers(users.filter(u => u._id !== id));
+      fetchUsers();
     } catch (err) {
-      setError(err.response?.data?.message || err.message);
+      console.error('Error deleting user:', err);
+      setError(err.response?.data?.message || 'Error deleting user');
     } finally {
       setDeleting(null);
     }
