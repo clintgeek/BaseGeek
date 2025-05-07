@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Box, Paper, Tabs, Tab, TextField, Button, Typography, Alert, Divider } from '@mui/material';
 import AppsOutlinedIcon from '@mui/icons-material/AppsOutlined';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/authStore.js';
 
 export default function LoginPage() {
   const [tab, setTab] = useState(0); // 0 = Login, 1 = Register
   const [form, setForm] = useState({ username: '', email: '', password: '' });
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, register, error, isLoading, hydrateUser } = useAuthStore();
+
+  // Get redirect param from query string
+  const params = new URLSearchParams(location.search);
+  const redirectUrl = params.get('redirect') || '/';
 
   // Hydrate user on mount
   useEffect(() => {
@@ -26,13 +31,13 @@ export default function LoginPage() {
         // Login
         const result = await login(form.username, form.password);
         if (result.success) {
-          navigate('/');
+          window.location.href = redirectUrl;
         }
       } else {
         // Register
         const result = await register(form.username, form.email, form.password);
         if (result.success) {
-          navigate('/');
+          window.location.href = redirectUrl;
         }
       }
     } catch (err) {
