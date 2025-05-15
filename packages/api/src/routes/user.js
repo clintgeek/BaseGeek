@@ -12,7 +12,13 @@ const JWT_EXPIRES_IN = '7d';
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 attempts
-  message: { message: 'Too many attempts, please try again later' }
+  message: { message: 'Too many attempts, please try again later' },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  keyGenerator: (req) => {
+    // Use X-Forwarded-For if available, otherwise use IP
+    return req.headers['x-forwarded-for'] || req.ip;
+  }
 });
 
 function generateToken(user, app = 'basegeek') {
