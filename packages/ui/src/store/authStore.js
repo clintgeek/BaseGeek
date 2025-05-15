@@ -21,8 +21,19 @@ const useAuthStore = create(
                     }, {
                         headers: {
                             'Content-Type': 'application/json',
+                        },
+                        // Don't follow redirects automatically
+                        maxRedirects: 0,
+                        validateStatus: function (status) {
+                            return status >= 200 && status < 400; // Accept 2xx and 3xx status codes
                         }
                     });
+
+                    // If we get a redirect response, let the browser handle it
+                    if (response.status >= 300 && response.status < 400) {
+                        window.location.href = response.headers.location;
+                        return { success: true };
+                    }
 
                     const { token } = response.data;
                     if (!token) {
@@ -55,6 +66,12 @@ const useAuthStore = create(
 
                     return { success: true };
                 } catch (error) {
+                    // If it's a redirect error, let the browser handle it
+                    if (error.response && error.response.status >= 300 && error.response.status < 400) {
+                        window.location.href = error.response.headers.location;
+                        return { success: true };
+                    }
+
                     const errorMessage = error.response?.data?.message || error.message || 'Login failed';
                     console.error('Authentication failed:', {
                         message: errorMessage,
