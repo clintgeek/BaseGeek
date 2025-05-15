@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
 
+const VALID_APPS = ['basegeek', 'notegeek'];
+
 export const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -10,6 +12,12 @@ export const authenticateToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Validate app claim if present (for backward compatibility)
+    if (decoded.app && !VALID_APPS.includes(decoded.app)) {
+      return res.status(403).json({ message: 'Invalid app token' });
+    }
+
     req.user = decoded;
     next();
   } catch (error) {
