@@ -152,9 +152,17 @@ router.post('/login', authLimiter, async (req, res) => {
 
     // If redirectUrl is provided, redirect with token
     if (redirectUrl) {
-      const redirectWithToken = new URL(redirectUrl);
-      redirectWithToken.searchParams.set('token', token);
-      return res.redirect(redirectWithToken.toString());
+      try {
+        const redirectWithToken = new URL(redirectUrl);
+        redirectWithToken.searchParams.set('token', token);
+        return res.redirect(302, redirectWithToken.toString());
+      } catch (err) {
+        console.error('Invalid redirect URL:', err);
+        return res.status(400).json({
+          message: 'Invalid redirect URL',
+          code: 'LOGIN_INVALID_REDIRECT'
+        });
+      }
     }
 
     // Otherwise return JSON response
