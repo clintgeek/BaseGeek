@@ -17,7 +17,8 @@ const useAuthStore = create(
                     const response = await axios.post('/api/users/login', {
                         identifier,
                         password,
-                        app
+                        app,
+                        redirectUrl: window.location.origin + '/auth/callback'
                     }, {
                         headers: {
                             'Content-Type': 'application/json',
