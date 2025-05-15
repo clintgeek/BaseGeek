@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Box, Paper, Tabs, Tab, TextField, Button, Typography, Alert, Divider } from '@mui/material';
 import AppsOutlinedIcon from '@mui/icons-material/AppsOutlined';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -9,17 +9,12 @@ export default function LoginPage() {
   const [form, setForm] = useState({ username: '', email: '', password: '' });
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, register, error, isLoading, hydrateUser } = useAuthStore();
+  const { login, register, error, isLoading } = useAuthStore();
 
   // Get redirect param from query string
   const params = new URLSearchParams(location.search);
   const redirectUrl = params.get('redirect') || '/';
   const app = params.get('app') || 'basegeek';
-
-  // Hydrate user on mount
-  useEffect(() => {
-    hydrateUser();
-  }, [hydrateUser]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -32,18 +27,13 @@ export default function LoginPage() {
         // Login
         const result = await login(form.username, form.password, app);
         if (result.success) {
-          // Don't do anything here - the auth store will handle the redirect
-          return;
+          navigate(redirectUrl);
         }
       } else {
         // Register
         const result = await register(form.username, form.email, form.password);
         if (result.success) {
-          if (redirectUrl) {
-            window.location.href = redirectUrl;
-          } else {
-            navigate('/');
-          }
+          navigate(redirectUrl);
         }
       }
     } catch (err) {

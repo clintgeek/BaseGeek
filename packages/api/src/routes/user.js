@@ -10,8 +10,8 @@ const JWT_EXPIRES_IN = '7d';
 
 // Rate limiting for auth endpoints
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts
+  windowMs: process.env.NODE_ENV === 'production' ? 15 * 60 * 1000 : 5 * 60 * 1000, // 15 minutes in prod, 5 minutes in dev
+  max: process.env.NODE_ENV === 'production' ? 5 : 20, // 5 attempts in prod, 20 in dev
   message: { message: 'Too many attempts, please try again later' },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
@@ -112,14 +112,12 @@ router.post('/', authLimiter, async (req, res) => {
 // @access  Public
 router.post('/login', authLimiter, async (req, res) => {
   try {
-    // Handle both formats: { identifier, password } or { email/username, password }
-    const { identifier, email, username, password, app, redirectUrl } = req.body;
-    const loginIdentifier = identifier || email || username;
+    const { identifier, password, app } = req.body;
 
     // Validation
-    if (!loginIdentifier || !password) {
+    if (!identifier || !password) {
       return res.status(400).json({
-        message: 'Identifier (username or email) and password are required',
+        message: 'Identifier and password are required',
         code: 'LOGIN_MISSING_FIELDS'
       });
     }
@@ -127,8 +125,8 @@ router.post('/login', authLimiter, async (req, res) => {
     // Find user by username or email
     const user = await User.findOne({
       $or: [
-        { username: loginIdentifier },
-        { email: loginIdentifier.toLowerCase() }
+        { username: identifier },
+        { email: identifier.toLowerCase() }
       ]
     });
 
@@ -150,22 +148,6 @@ router.post('/login', authLimiter, async (req, res) => {
 
     const token = generateToken(user, app || 'basegeek');
 
-    // If redirectUrl is provided, redirect with token
-    if (redirectUrl) {
-      try {
-        const redirectWithToken = new URL(redirectUrl);
-        redirectWithToken.searchParams.set('token', token);
-        return res.redirect(302, redirectWithToken.toString());
-      } catch (err) {
-        console.error('Invalid redirect URL:', err);
-        return res.status(400).json({
-          message: 'Invalid redirect URL',
-          code: 'LOGIN_INVALID_REDIRECT'
-        });
-      }
-    }
-
-    // Otherwise return JSON response
     res.json({
       token,
       user: {

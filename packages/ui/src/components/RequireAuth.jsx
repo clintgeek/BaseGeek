@@ -1,22 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/authStore.js';
+import { CircularProgress, Box } from '@mui/material';
 
 const RequireAuth = ({ children }) => {
-  const { isAuthenticated, hydrateUser } = useAuthStore();
+  const { isAuthenticated, checkAuth } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      await hydrateUser();
+    const verifyAuth = async () => {
+      await checkAuth();
       setIsLoading(false);
     };
-    checkAuth();
-  }, [hydrateUser]);
+    verifyAuth();
+  }, [checkAuth]);
 
   if (isLoading) {
-    return null; // or a loading spinner
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    );
   }
 
   if (!isAuthenticated) {
