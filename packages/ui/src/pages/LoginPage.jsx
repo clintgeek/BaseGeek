@@ -32,11 +32,8 @@ export default function LoginPage() {
         // Login
         const result = await login(form.username, form.password, app);
         if (result.success) {
-          if (redirectUrl) {
-            window.location.href = redirectUrl;
-          } else {
-            navigate('/');
-          }
+          // Don't do anything here - the auth store will handle the redirect
+          return;
         }
       } else {
         // Register
