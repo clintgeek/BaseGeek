@@ -14,6 +14,7 @@ export default function LoginPage() {
   // Get redirect param from query string
   const params = new URLSearchParams(location.search);
   const redirectUrl = params.get('redirect') || '/';
+  const app = params.get('app') || 'basegeek';
 
   // Hydrate user on mount
   useEffect(() => {
@@ -29,15 +30,23 @@ export default function LoginPage() {
     try {
       if (tab === 0) {
         // Login
-        const result = await login(form.username, form.password);
+        const result = await login(form.username, form.password, app);
         if (result.success) {
-          window.location.href = redirectUrl;
+          if (redirectUrl) {
+            window.location.href = redirectUrl;
+          } else {
+            navigate('/');
+          }
         }
       } else {
         // Register
         const result = await register(form.username, form.email, form.password);
         if (result.success) {
-          window.location.href = redirectUrl;
+          if (redirectUrl) {
+            window.location.href = redirectUrl;
+          } else {
+            navigate('/');
+          }
         }
       }
     } catch (err) {

@@ -15,12 +15,13 @@ const authLimiter = rateLimit({
   message: { message: 'Too many attempts, please try again later' }
 });
 
-function generateToken(user) {
+function generateToken(user, app = 'basegeek') {
   return jwt.sign(
     {
       sub: user._id, // Use 'sub' (subject) as per JWT standard
       username: user.username,
-      email: user.email
+      email: user.email,
+      app: app // Add app claim to identify the source application
     },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN }
@@ -106,7 +107,7 @@ router.post('/', authLimiter, async (req, res) => {
 router.post('/login', authLimiter, async (req, res) => {
   try {
     // Handle both formats: { identifier, password } or { email/username, password }
-    const { identifier, email, username, password } = req.body;
+    const { identifier, email, username, password, app, redirectUrl } = req.body;
     const loginIdentifier = identifier || email || username;
 
     // Validation
@@ -141,7 +142,16 @@ router.post('/login', authLimiter, async (req, res) => {
       });
     }
 
-    const token = generateToken(user);
+    const token = generateToken(user, app || 'basegeek');
+
+    // If redirectUrl is provided, redirect with token
+    if (redirectUrl) {
+      const redirectWithToken = new URL(redirectUrl);
+      redirectWithToken.searchParams.set('token', token);
+      return res.redirect(redirectWithToken.toString());
+    }
+
+    // Otherwise return JSON response
     res.json({
       token,
       user: {

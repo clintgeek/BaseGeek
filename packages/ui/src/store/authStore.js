@@ -11,12 +11,13 @@ const useAuthStore = create(
             isLoading: false,
             error: null,
 
-            login: async (identifier, password) => {
+            login: async (identifier, password, app) => {
                 try {
                     set({ isLoading: true, error: null });
                     const response = await axios.post('/api/users/login', {
                         identifier,
                         password,
+                        app
                     }, {
                         headers: {
                             'Content-Type': 'application/json',
