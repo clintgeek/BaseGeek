@@ -1,8 +1,8 @@
-import { Router } from 'express';
-import User from '../models/user.js';
-import { authenticateToken } from '../middleware/auth';
+import express from 'express';
+import { authenticateToken } from '../middleware/auth.js';
+import { User } from '../models/User.js';
 
-const router = Router();
+const router = express.Router();
 
 // @desc    Get current user
 // @route   GET /api/users/me
