@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { Box, Paper, Tabs, Tab, TextField, Button, Typography, Alert, Divider } from '@mui/material';
 import AppsOutlinedIcon from '@mui/icons-material/AppsOutlined';
 import { useNavigate, useLocation } from 'react-router-dom';
-import useAuthStore from '../store/authStore.js';
+import useSharedAuthStore from '../store/sharedAuthStore.js';
 
 export default function LoginPage() {
   const [tab, setTab] = useState(0); // 0 = Login, 1 = Register
   const [form, setForm] = useState({ username: '', email: '', password: '' });
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, register, error, isLoading } = useAuthStore();
+  const { login, error, isLoading } = useSharedAuthStore();
 
   // Get redirect param from query string
   const params = new URLSearchParams(location.search);
@@ -30,11 +30,9 @@ export default function LoginPage() {
           navigate(redirectUrl);
         }
       } else {
-        // Register
-        const result = await register(form.username, form.email, form.password);
-        if (result.success) {
-          navigate(redirectUrl);
-        }
+        // Register - Note: Registration should be handled by the shared auth system
+        // This will be implemented in a separate update
+        console.warn('Registration through shared auth not yet implemented');
       }
     } catch (err) {
       console.error('Form submission error:', err);

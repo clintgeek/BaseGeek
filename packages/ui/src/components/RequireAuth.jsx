@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import useAuthStore from '../store/authStore.js';
+import useSharedAuthStore from '../store/sharedAuthStore.js';
 import { CircularProgress, Box } from '@mui/material';
 
 const RequireAuth = ({ children }) => {
-  const { isAuthenticated, checkAuth } = useAuthStore();
+  const { isAuthenticated, checkAuth } = useSharedAuthStore();
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
 
