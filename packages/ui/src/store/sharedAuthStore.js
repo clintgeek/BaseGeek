@@ -89,6 +89,52 @@ const useSharedAuthStore = create(
                 }
             },
 
+            // Register new user
+            register: async (username, email, password, app) => {
+                try {
+                    set({ isLoading: true, error: null });
+                    const response = await axios.post('/api/auth/register', {
+                        username,
+                        email,
+                        password,
+                        app
+                    });
+
+                    const { token, user } = response.data;
+                    if (!token || !user) {
+                        throw new Error('Invalid response from server');
+                    }
+
+                    set({
+                        token,
+                        user,
+                        isAuthenticated: true,
+                        currentApp: app,
+                        error: null,
+                        isLoading: false
+                    });
+
+                    // Broadcast auth state change
+                    window.postMessage({
+                        type: 'GEEK_AUTH_STATE_CHANGE',
+                        payload: { token, user, app }
+                    }, '*');
+
+                    return { success: true };
+                } catch (error) {
+                    const errorMessage = error.response?.data?.message || error.message || 'Registration failed';
+                    set({
+                        error: errorMessage,
+                        isLoading: false,
+                        isAuthenticated: false,
+                        token: null,
+                        user: null,
+                        currentApp: null
+                    });
+                    return { success: false, error: errorMessage };
+                }
+            },
+
             // Logout from all apps
             logout: () => {
                 set({

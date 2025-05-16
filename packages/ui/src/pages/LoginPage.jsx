@@ -9,7 +9,7 @@ export default function LoginPage() {
   const [form, setForm] = useState({ username: '', email: '', password: '' });
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, error, isLoading } = useSharedAuthStore();
+  const { login, register, error, isLoading } = useSharedAuthStore();
 
   // Get redirect param from query string
   const params = new URLSearchParams(location.search);
@@ -30,9 +30,11 @@ export default function LoginPage() {
           navigate(redirectUrl);
         }
       } else {
-        // Register - Note: Registration should be handled by the shared auth system
-        // This will be implemented in a separate update
-        console.warn('Registration through shared auth not yet implemented');
+        // Register
+        const result = await register(form.username, form.email, form.password, app);
+        if (result.success) {
+          navigate(redirectUrl);
+        }
       }
     } catch (err) {
       console.error('Form submission error:', err);
