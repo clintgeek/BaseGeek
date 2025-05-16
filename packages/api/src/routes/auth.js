@@ -1,6 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import authService from '../services/authService';
+import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -51,8 +52,8 @@ router.post('/validate', async (req, res) => {
 // @access  Public
 router.post('/refresh', async (req, res) => {
     try {
-        const { token } = req.body;
-        const result = await authService.refreshToken(token);
+        const { token, app } = req.body;
+        const result = await authService.refreshToken(token, app);
         res.json(result);
     } catch (error) {
         res.status(401).json({
@@ -65,7 +66,7 @@ router.post('/refresh', async (req, res) => {
 // @desc    Get user profile
 // @route   GET /api/auth/profile
 // @access  Private
-router.get('/profile', async (req, res) => {
+router.get('/profile', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.id;
         const profile = await authService.getUserProfile(userId);

@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import mongoRoutes from './routes/mongo.js';
 import redisRoutes from './routes/redis.js';
 import postgresRoutes from './routes/postgres.js';
+import authRoutes from './routes/auth.js';
 import userRoutes from './routes/user.js';
 import noteGeekRoutes from './routes/noteGeek.js';
 
@@ -22,8 +23,13 @@ mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true 
 
 // Middleware
 app.use(cors());
-app.use(morgan('dev'));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// HTTP request logger middleware (only in development)
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+}
 
 // Log all requests
 app.use((req, res, next) => {
@@ -32,11 +38,12 @@ app.use((req, res, next) => {
 });
 
 // Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/notes', noteGeekRoutes);
 app.use('/api/mongo', mongoRoutes);
 app.use('/api/redis', redisRoutes);
 app.use('/api/postgres', postgresRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/notes', noteGeekRoutes);
 
 // Basic health check
 app.get('/api/health', (req, res) => {
