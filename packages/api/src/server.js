@@ -22,7 +22,31 @@ mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true 
   .catch(err => console.error('MongoDB connection error:', err));
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5173',    // Vite dev server
+    'http://localhost:5001',    // Backend dev server
+    'https://basegeek.clintgeek.com',  // Production domain
+    'https://notegeek.clintgeek.com',  // NoteGeek production
+    'http://192.168.1.17:5173'  // Local network access
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Allow-Headers',
+    'Access-Control-Allow-Origin',
+    'Access-Control-Allow-Credentials'
+  ],
+  exposedHeaders: ['Content-Range'],
+  maxAge: 86400,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
