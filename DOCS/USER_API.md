@@ -20,6 +20,52 @@ Authorization: Bearer <token>
 
 ## API Endpoints
 
+### Register
+Create a new user account.
+
+```http
+POST /api/auth/register
+```
+
+#### Request Body
+```json
+{
+    "username": "string",
+    "email": "string",
+    "password": "string",
+    "app": "string"         // 'basegeek', 'notegeek', or 'bujogeek'
+}
+```
+
+#### Response
+```json
+{
+    "token": "string",
+    "user": {
+        "id": "string",
+        "username": "string",
+        "email": "string",
+        "profile": {
+            // User profile data
+        }
+    }
+}
+```
+
+#### Error Responses
+```json
+{
+    "message": "User already exists",
+    "code": "USER_EXISTS"
+}
+```
+```json
+{
+    "message": "Registration failed",
+    "code": "REGISTER_ERROR"
+}
+```
+
 ### Login
 Authenticate a user and receive a JWT token.
 
@@ -88,9 +134,7 @@ POST /api/auth/validate
         "id": "string",
         "username": "string",
         "email": "string",
-        "profile": {
-            // User profile data
-        }
+        "app": "string"
     }
 }
 ```
@@ -99,7 +143,8 @@ POST /api/auth/validate
 ```json
 {
     "message": "Invalid or expired token",
-    "code": "TOKEN_VALIDATION_ERROR"
+    "code": "TOKEN_VALIDATION_ERROR",
+    "valid": false
 }
 ```
 
@@ -113,22 +158,15 @@ POST /api/auth/refresh
 #### Request Body
 ```json
 {
-    "token": "string"
+    "token": "string",
+    "app": "string"  // 'basegeek', 'notegeek', or 'bujogeek'
 }
 ```
 
 #### Response
 ```json
 {
-    "token": "string",
-    "user": {
-        "id": "string",
-        "username": "string",
-        "email": "string",
-        "profile": {
-            // User profile data
-        }
-    }
+    "token": "string"
 }
 ```
 
@@ -160,7 +198,8 @@ Authorization: Bearer <token>
     "email": "string",
     "profile": {
         // User profile data
-    }
+    },
+    "lastLogin": "string"  // ISO date string
 }
 ```
 
@@ -176,11 +215,11 @@ Authorization: Bearer <token>
 JWT tokens contain the following claims:
 ```json
 {
-    "id": "string",      // User ID
-    "email": "string",   // User email
-    "username": "string",// Username
-    "app": "string",     // App identifier
-    "exp": number        // Expiration timestamp
+    "userId": "string",    // User ID
+    "email": "string",     // User email
+    "username": "string",  // Username
+    "app": "string",       // App identifier
+    "exp": number         // Expiration timestamp
 }
 ```
 
@@ -192,14 +231,16 @@ JWT tokens contain the following claims:
 | `TOKEN_VALIDATION_ERROR` | Invalid or expired token |
 | `TOKEN_REFRESH_ERROR` | Token refresh failed |
 | `PROFILE_ERROR` | User profile not found |
+| `USER_EXISTS` | User already exists |
+| `REGISTER_ERROR` | Registration failed |
 
 ## Security Considerations
 
 ### Token Security
-- Tokens expire after 7 days
+- Tokens expire after 24 hours by default (configurable via JWT_EXPIRES_IN environment variable)
 - Tokens are app-specific
-- Tokens are validated against the user database
-- Tokens are signed with a secure secret
+- Tokens are validated against the user database on each validation request
+- Tokens are signed with JWT_SECRET (configurable via environment variable)
 
 ### Password Security
 - Passwords are hashed using bcrypt
@@ -209,7 +250,8 @@ JWT tokens contain the following claims:
 ### Cross-App Security
 - Tokens are validated for specific apps
 - App context is maintained in tokens
-- Cross-app communication is secured
+- Only valid apps ('basegeek', 'notegeek', 'bujogeek') are accepted
+- Cross-app communication is secured through window.postMessage
 
 ## Cross-App Communication
 The system uses a message-based system for cross-app communication:
@@ -224,6 +266,16 @@ The system uses a message-based system for cross-app communication:
         app: string
     }
 }
+```
+
+Apps can listen for auth state changes:
+```javascript
+window.addEventListener('message', (event) => {
+    if (event.data.type === 'GEEK_AUTH_STATE_CHANGE') {
+        const { token, user, app } = event.data.payload;
+        // Handle auth state change
+    }
+});
 ```
 
 ## Usage Examples
@@ -248,7 +300,8 @@ const validation = await axios.post('/api/auth/validate', {
 ### Refresh Token
 ```javascript
 const refresh = await axios.post('/api/auth/refresh', {
-    token: 'jwt-token'
+    token: 'jwt-token',
+    app: 'basegeek'
 });
 ```
 
@@ -275,11 +328,7 @@ const profile = await axios.get('/api/auth/profile', {
    - Use HTTPS for all requests
    - Implement proper CORS policies
    - Validate all input data
-
-4. **Cross-App Integration**
-   - Listen for auth state changes
-   - Handle token synchronization
-   - Implement proper error recovery
+   - Set JWT_SECRET and JWT_EXPIRES_IN environment variables
 
 ## Support
 For issues or questions about the API, please contact the GeekSuite development team.

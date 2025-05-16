@@ -2,6 +2,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import authService from '../services/authService.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { User } from '../models/user.js';
 
 const router = express.Router();
 
@@ -20,11 +21,68 @@ const authLimiter = rateLimit({
 // @access  Public
 router.post('/login', authLimiter, async (req, res) => {
     try {
+        console.log('Login request received:', {
+            body: req.body,
+            headers: req.headers,
+            ip: req.ip
+        });
+
         const { identifier, password, app } = req.body;
-        const result = await authService.login(identifier, password, app);
+
+        // Validate required fields
+        if (!identifier || !password) {
+            console.error('Missing credentials:', {
+                identifier: !!identifier,
+                password: !!password,
+                body: req.body
+            });
+            return res.status(400).json({
+                message: 'Missing credentials',
+                code: 'LOGIN_ERROR'
+            });
+        }
+
+        // Validate app
+        if (!app || !['basegeek', 'notegeek', 'bujogeek'].includes(app.toLowerCase())) {
+            console.error('Invalid app:', {
+                app,
+                validApps: ['basegeek', 'notegeek', 'bujogeek']
+            });
+            return res.status(400).json({
+                message: 'Invalid app',
+                code: 'LOGIN_ERROR'
+            });
+        }
+
+        console.log('Attempting login for:', {
+            identifier,
+            app: app.toLowerCase(),
+            timestamp: new Date().toISOString()
+        });
+
+        const result = await authService.login(identifier, password, app.toLowerCase());
+
+        console.log('Login successful for:', {
+            identifier,
+            app: app.toLowerCase(),
+            userId: result.user.id,
+            timestamp: new Date().toISOString()
+        });
+
         res.json(result);
     } catch (error) {
-        res.status(401).json({
+        console.error('Login error:', {
+            message: error.message,
+            stack: error.stack,
+            identifier: req.body.identifier,
+            app: req.body.app,
+            timestamp: new Date().toISOString()
+        });
+
+        // Determine appropriate status code
+        const statusCode = error.message.includes('Invalid credentials') ? 401 : 500;
+
+        res.status(statusCode).json({
             message: error.message,
             code: 'LOGIN_ERROR'
         });
@@ -84,6 +142,142 @@ router.get('/profile', authenticateToken, async (req, res) => {
         res.status(404).json({
             message: error.message,
             code: 'PROFILE_ERROR'
+        });
+    }
+});
+
+// @desc    Register new user
+// @route   POST /api/auth/register
+// @access  Public
+router.post('/register', async (req, res) => {
+    try {
+        const { username, email, password, app } = req.body;
+
+        // Check if user already exists
+        const existingUser = await User.findOne({
+            $or: [{ username }, { email }]
+        });
+
+        if (existingUser) {
+            return res.status(400).json({
+                message: 'User already exists',
+                code: 'USER_EXISTS'
+            });
+        }
+
+        // Create new user
+        const user = new User({
+            username,
+            email,
+            password,
+            profile: {},
+            lastLogin: new Date()
+        });
+
+        await user.save();
+
+        // Generate token
+        const token = await authService.generateToken(user, app);
+
+        res.status(201).json({
+            token,
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                profile: user.profile
+            }
+        });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(400).json({
+            message: error.message,
+            code: 'REGISTER_ERROR'
+        });
+    }
+});
+
+// @desc    Debug: Check user data
+// @route   GET /api/auth/debug/user/:identifier
+// @access  Public
+router.get('/debug/user/:identifier', async (req, res) => {
+    try {
+        const { identifier } = req.params;
+        const user = await User.findOne({
+            $or: [
+                { username: identifier },
+                { email: identifier.toLowerCase() }
+            ]
+        });
+
+        if (!user) {
+            return res.status(404).json({
+                message: 'User not found',
+                code: 'USER_NOT_FOUND'
+            });
+        }
+
+        // Return user data without sensitive information
+        res.json({
+            id: user._id,
+            username: user.username,
+            email: user.email,
+            hasPassword: !!user.password,
+            passwordLength: user.password ? user.password.length : 0,
+            lastLogin: user.lastLogin,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt
+        });
+    } catch (error) {
+        console.error('Debug user error:', error);
+        res.status(500).json({
+            message: error.message,
+            code: 'DEBUG_ERROR'
+        });
+    }
+});
+
+// @desc    Reset user password
+// @route   POST /api/auth/reset-password
+// @access  Public
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { identifier, newPassword } = req.body;
+
+        if (!identifier || !newPassword) {
+            return res.status(400).json({
+                message: 'Identifier and new password are required',
+                code: 'MISSING_DATA'
+            });
+        }
+
+        const user = await User.findOne({
+            $or: [
+                { username: identifier },
+                { email: identifier.toLowerCase() }
+            ]
+        });
+
+        if (!user) {
+            return res.status(404).json({
+                message: 'User not found',
+                code: 'USER_NOT_FOUND'
+            });
+        }
+
+        // Update password
+        user.password = newPassword;
+        await user.save();
+
+        res.json({
+            message: 'Password updated successfully',
+            code: 'PASSWORD_UPDATED'
+        });
+    } catch (error) {
+        console.error('Password reset error:', error);
+        res.status(500).json({
+            message: error.message,
+            code: 'RESET_ERROR'
         });
     }
 });

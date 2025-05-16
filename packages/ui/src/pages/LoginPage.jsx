@@ -6,7 +6,7 @@ import useSharedAuthStore from '../store/sharedAuthStore.js';
 
 export default function LoginPage() {
   const [tab, setTab] = useState(0); // 0 = Login, 1 = Register
-  const [form, setForm] = useState({ username: '', email: '', password: '' });
+  const [form, setForm] = useState({ identifier: '', email: '', password: '' });
   const navigate = useNavigate();
   const location = useLocation();
   const { login, register, error, isLoading } = useSharedAuthStore();
@@ -25,13 +25,15 @@ export default function LoginPage() {
     try {
       if (tab === 0) {
         // Login
-        const result = await login(form.username, form.password, app);
+        console.log('Login attempt:', form.identifier, form.password, app);
+        const result = await login(form.identifier, form.password, app);
         if (result.success) {
           navigate(redirectUrl);
         }
       } else {
         // Register
-        const result = await register(form.username, form.email, form.password, app);
+        console.log('Register attempt:', form.identifier, form.email, form.password, app);
+        const result = await register(form.identifier, form.email, form.password, app);
         if (result.success) {
           navigate(redirectUrl);
         }
@@ -61,9 +63,9 @@ export default function LoginPage() {
         </Tabs>
         <form onSubmit={handleSubmit}>
           <TextField
-            label="Username"
-            name="username"
-            value={form.username}
+            label="Username or Email"
+            name="identifier"
+            value={form.identifier}
             onChange={handleChange}
             fullWidth
             margin="normal"

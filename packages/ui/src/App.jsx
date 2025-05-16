@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import theme from './theme';
@@ -13,23 +13,21 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
-        <SharedAuthProvider app="basegeek">
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route
-              path="/*"
-              element={
-                <RequireAuth>
-                  <Layout />
-                </RequireAuth>
-              }
-            />
-          </Routes>
-        </SharedAuthProvider>
-      </Router>
+      <SharedAuthProvider app="basegeek">
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route
+            path="/*"
+            element={
+              <RequireAuth>
+                <Layout />
+              </RequireAuth>
+            }
+          />
+        </Routes>
+      </SharedAuthProvider>
     </ThemeProvider>
   );
 }
