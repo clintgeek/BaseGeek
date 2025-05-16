@@ -1,6 +1,6 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import authService from '../services/authService';
+import authService from '../services/authService.js';
 import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
