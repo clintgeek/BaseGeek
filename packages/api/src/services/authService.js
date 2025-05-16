@@ -1,162 +1,124 @@
 import jwt from 'jsonwebtoken';
-import { User } from '../models/User';
-import { JWT_SECRET } from '../config';
+import { User } from '../models/User.js';
+import bcrypt from 'bcryptjs';
 
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 const VALID_APPS = ['basegeek', 'notegeek', 'bujogeek'];
 
 // Token generation with app context
-const generateToken = (user, app) => {
-  return jwt.sign(
-    {
-      id: user._id,
-      email: user.email,
-      username: user.username,
-      app: app || 'basegeek'
-    },
-    JWT_SECRET,
-    { expiresIn: '7d' }
-  );
+export const generateToken = (user, app = null) => {
+  const payload = {
+    userId: user._id,
+    username: user.username,
+    email: user.email,
+    app
+  };
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 };
 
-// Validate token for specific app
-const validateTokenForApp = async (token, app) => {
+// Login user
+export const login = async (usernameOrEmail, password) => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    return {
-      valid: true,
-      app: decoded.app,
-      user: decoded
-    };
-  } catch (error) {
-    return {
-      valid: false,
-      error: error.message
-    };
-  }
-};
+    // Find user by username or email
+    const user = await User.findOne({
+      $or: [
+        { username: usernameOrEmail },
+        { email: usernameOrEmail }
+      ]
+    });
 
-// Central auth service
-const authService = {
-  // Login user across all apps
-  login: async (identifier, password, app) => {
-    try {
-      // Find user
-      const user = await User.findOne({
-        $or: [
-          { username: identifier },
-          { email: identifier.toLowerCase() }
-        ]
-      });
-
-      if (!user) {
-        throw new Error('Invalid credentials');
-      }
-
-      // Verify password
-      const valid = await user.comparePassword(password);
-      if (!valid) {
-        throw new Error('Invalid credentials');
-      }
-
-      // Generate token for the specific app
-      const token = generateToken(user, app);
-
-      // Update last login
-      user.lastLogin = new Date();
-      await user.save();
-
-      return {
-        token,
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          profile: user.profile
-        }
-      };
-    } catch (error) {
-      throw error;
+    if (!user) {
+      throw new Error('User not found');
     }
-  },
 
-  // Validate token across all apps
-  validateToken: async (token) => {
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-
-      // Check if token is for a valid app
-      if (!VALID_APPS.includes(decoded.app)) {
-        throw new Error('Invalid app token');
-      }
-
-      // Verify user still exists
-      const user = await User.findById(decoded.id);
-      if (!user) {
-        throw new Error('User not found');
-      }
-
-      return {
-        valid: true,
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          profile: user.profile
-        }
-      };
-    } catch (error) {
-      return {
-        valid: false,
-        error: error.message
-      };
+    // Verify password
+    const isValidPassword = await user.comparePassword(password);
+    if (!isValidPassword) {
+      throw new Error('Invalid password');
     }
-  },
 
-  // Get user profile
-  getUserProfile: async (userId) => {
-    try {
-      const user = await User.findById(userId);
-      if (!user) {
-        throw new Error('User not found');
-      }
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save();
 
-      return {
+    // Generate token
+    const token = generateToken(user);
+
+    return {
+      token,
+      user: {
         id: user._id,
         username: user.username,
         email: user.email,
         profile: user.profile
-      };
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  // Refresh token
-  refreshToken: async (token) => {
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      const user = await User.findById(decoded.id);
-
-      if (!user) {
-        throw new Error('User not found');
       }
-
-      // Generate new token with same app context
-      const newToken = generateToken(user, decoded.app);
-
-      return {
-        token: newToken,
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          profile: user.profile
-        }
-      };
-    } catch (error) {
-      throw error;
-    }
+    };
+  } catch (error) {
+    throw error;
   }
 };
 
-export default authService;
+// Validate token
+export const validateToken = async (token) => {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded.userId);
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return {
+      userId: user._id,
+      username: user.username,
+      email: user.email,
+      app: decoded.app
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Refresh token
+export const refreshToken = async (token) => {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded.userId);
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return generateToken(user, decoded.app);
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Get user profile
+export const getUserProfile = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return {
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      profile: user.profile,
+      lastLogin: user.lastLogin
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+export default {
+  login,
+  validateToken,
+  refreshToken,
+  getUserProfile
+};
