@@ -38,11 +38,20 @@ router.post('/validate', async (req, res) => {
     try {
         const { token, app } = req.body;
         const result = await authService.validateToken(token);
-        res.json(result);
+        res.json({
+            valid: true,
+            user: {
+                id: result.userId,
+                username: result.username,
+                email: result.email,
+                app: result.app
+            }
+        });
     } catch (error) {
         res.status(401).json({
             message: error.message,
-            code: 'TOKEN_VALIDATION_ERROR'
+            code: 'TOKEN_VALIDATION_ERROR',
+            valid: false
         });
     }
 });
