@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import authService from '../services/authService.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { User } from '../models/user.js';
+import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 
@@ -119,10 +120,45 @@ router.post('/validate', async (req, res) => {
 // @access  Public
 router.post('/refresh', async (req, res) => {
     try {
-        const { token, app } = req.body;
-        const result = await authService.refreshToken(token, app);
-        res.json(result);
+        const { refreshToken, app } = req.body;
+
+        if (!refreshToken) {
+            return res.status(400).json({
+                message: 'Refresh token is required',
+                code: 'TOKEN_REFRESH_ERROR'
+            });
+        }
+
+        // Validate the refresh token
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+        const user = await User.findById(decoded.userId);
+
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        // Generate new access token
+        const accessToken = authService.generateToken(user, app);
+
+        // Generate new refresh token
+        const newRefreshToken = jwt.sign(
+            { userId: user._id },
+            process.env.JWT_REFRESH_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        res.json({
+            token: accessToken,
+            refreshToken: newRefreshToken,
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                app
+            }
+        });
     } catch (error) {
+        console.error('Token refresh error:', error);
         res.status(401).json({
             message: error.message,
             code: 'TOKEN_REFRESH_ERROR'
