@@ -27,7 +27,7 @@ export default function LoginPage() {
         // Login
         console.log('Login attempt:', form.identifier, form.password, app);
         const result = await login(form.identifier, form.password, app);
-        if (result.success) {
+        if (result && result.token) {
           // If redirectUrl is present and not just '/', redirect with token and state
           if (redirectUrl && redirectUrl !== '/') {
             const state = params.get('state');
@@ -43,7 +43,7 @@ export default function LoginPage() {
         // Register
         console.log('Register attempt:', form.identifier, form.email, form.password, app);
         const result = await register(form.identifier, form.email, form.password, app);
-        if (result.success) {
+        if (result && result.token) {
           if (redirectUrl && redirectUrl !== '/') {
             const state = params.get('state');
             const url = new URL(decodeURIComponent(redirectUrl));
