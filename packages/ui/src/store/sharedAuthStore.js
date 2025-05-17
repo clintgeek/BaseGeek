@@ -46,6 +46,7 @@ const useSharedAuthStore = create(
 
             // Login to any app
             login: async (identifier, password, app) => {
+                console.log('sharedAuthStore login called', identifier, app);
                 try {
                     set({ isLoading: true, error: null });
                     const response = await axios.post('/api/auth/login', {
@@ -54,6 +55,7 @@ const useSharedAuthStore = create(
                         app
                     });
 
+                    console.log('sharedAuthStore login response.data:', response.data);
                     const { token, user } = response.data;
                     if (!token || !user) {
                         throw new Error('Invalid response from server');
@@ -74,6 +76,7 @@ const useSharedAuthStore = create(
                         payload: { token, user, app }
                     }, '*');
 
+                    console.log('sharedAuthStore login returning:', response.data);
                     return response.data;
                 } catch (error) {
                     const errorMessage = error.response?.data?.message || error.message || 'Login failed';
@@ -85,6 +88,7 @@ const useSharedAuthStore = create(
                         user: null,
                         currentApp: null
                     });
+                    console.log('sharedAuthStore login error:', error);
                     return { error: errorMessage };
                 }
             },
