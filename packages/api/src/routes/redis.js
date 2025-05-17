@@ -1,7 +1,11 @@
-import { Router } from 'express';
+import express from 'express';
 import { createClient } from 'redis';
+import { authenticateToken } from '../middleware/auth.js';
 
-const router = Router();
+const router = express.Router();
+
+// Protect all routes
+router.use(authenticateToken);
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://192.168.1.17:6380';
 

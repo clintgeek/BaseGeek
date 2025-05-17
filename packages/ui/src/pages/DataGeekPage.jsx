@@ -1,7 +1,7 @@
 import { Box, Paper, Tabs, Tab, Card, CardContent, Typography, CircularProgress, Grid } from '@mui/material';
 import { useState, useEffect } from 'react';
 import MongoStatus from '../components/MongoStatus';
-import axios from 'axios';
+import api from '../api';
 
 function RedisStatus() {
   const [status, setStatus] = useState({
@@ -18,7 +18,7 @@ function RedisStatus() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const response = await axios.get('/api/redis/status');
+        const response = await api.get('/redis/status');
         setStatus({
           isLoading: false,
           isConnected: response.data.status === 'connected',
@@ -113,7 +113,7 @@ function PostgresStatus() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const response = await axios.get('/api/postgres/status');
+        const response = await api.get('/postgres/status');
         setStatus({
           isLoading: false,
           isConnected: response.data.status === 'connected',

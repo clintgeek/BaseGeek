@@ -72,4 +72,52 @@ router.put('/profile', authenticateToken, async (req, res) => {
     }
 });
 
+// @desc    Get all users
+// @route   GET /api/users
+// @access  Private
+router.get('/', authenticateToken, async (req, res) => {
+    try {
+        const users = await User.find({}, '-passwordHash').lean();
+        res.json({
+            users: users.map(user => ({
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                profile: user.profile,
+                lastLogin: user.lastLogin
+            }))
+        });
+    } catch (err) {
+        console.error('Get all users error:', err);
+        res.status(500).json({
+            message: err.message,
+            code: 'GET_ALL_USERS_ERROR'
+        });
+    }
+});
+
+// @desc    Delete user
+// @route   DELETE /api/users/:id
+// @access  Private
+router.delete('/:id', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({
+                message: 'User not found',
+                code: 'USER_NOT_FOUND'
+            });
+        }
+
+        await user.deleteOne();
+        res.json({ message: 'User deleted successfully' });
+    } catch (err) {
+        console.error('Delete user error:', err);
+        res.status(500).json({
+            message: err.message,
+            code: 'DELETE_USER_ERROR'
+        });
+    }
+});
+
 export default router;

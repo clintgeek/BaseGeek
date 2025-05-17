@@ -4,6 +4,9 @@ import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Protect all routes
+router.use(authenticateToken);
+
 // Note Schema
 const noteSchema = new mongoose.Schema({
   title: { type: String, required: true },
@@ -21,7 +24,7 @@ const noteSchema = new mongoose.Schema({
 const Note = mongoose.model('Note', noteSchema);
 
 // Get all notes for a user
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { tag, prefix } = req.query;
     const filter = { userId: req.user.id };
@@ -42,7 +45,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Get a single note
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const note = await Note.findOne({ _id: req.params.id, userId: req.user.id });
     if (!note) {
@@ -70,7 +73,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // Create a new note
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const {
       title,
@@ -116,7 +119,7 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // Update a note
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const note = await Note.findOne({ _id: req.params.id, userId: req.user.id });
     if (!note) {
@@ -153,7 +156,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 });
 
 // Delete a note
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const note = await Note.findOne({ _id: req.params.id, userId: req.user.id });
     if (!note) {
@@ -176,7 +179,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 });
 
 // Get tag hierarchy
-router.get('/tags', authenticateToken, async (req, res) => {
+router.get('/tags', async (req, res) => {
   try {
     const notes = await Note.find({ userId: req.user.id }, 'tags');
     const hierarchy = {};

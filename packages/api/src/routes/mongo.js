@@ -1,11 +1,16 @@
+import express from 'express';
 import { Router } from 'express';
 import { MongoClient } from 'mongodb';
 import dotenv from 'dotenv';
+import { authenticateToken } from '../middleware/auth.js';
 
 // Load environment variables
 dotenv.config();
 
-const router = Router();
+const router = express.Router();
+
+// Example: protect all routes
+router.use(authenticateToken);
 
 // MongoDB connection details from environment variables
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://datageek_user:DataGeek_User_2024@192.168.1.17:27018/datageek?authSource=admin';

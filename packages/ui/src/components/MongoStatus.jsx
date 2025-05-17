@@ -11,7 +11,7 @@ import {
   ListItem,
   ListItemText
 } from '@mui/material';
-import axios from 'axios';
+import api from '../api';
 
 const formatBytes = (bytes, decimals = 2) => {
   if (!bytes || bytes === 0) return '0 Bytes';
@@ -41,7 +41,7 @@ export default function MongoStatus() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const response = await axios.get('/api/mongo/status');
+        const response = await api.get('/mongo/status');
         setStatus({
           isLoading: false,
           isConnected: true,

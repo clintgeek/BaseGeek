@@ -11,6 +11,10 @@ export const authenticateToken = (req, res, next) => {
   }
 
   try {
+    // Debug: Print the JWT secret and its length
+    console.log('JWT_SECRET:', process.env.JWT_SECRET);
+    console.log('JWT_SECRET length:', process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 'undefined');
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Validate app claim if present (for backward compatibility)

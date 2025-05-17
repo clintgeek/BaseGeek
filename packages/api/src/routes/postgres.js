@@ -1,8 +1,12 @@
-import { Router } from 'express';
+import express from 'express';
 import pkg from 'pg';
+import { authenticateToken } from '../middleware/auth.js';
 const { Client } = pkg;
 
-const router = Router();
+const router = express.Router();
+
+// Protect all routes
+router.use(authenticateToken);
 
 const POSTGRES_URL = process.env.POSTGRES_URL || 'postgres://datageek_pg_admin:DataGeek_PG_2024@192.168.1.17:55432/datageek';
 
