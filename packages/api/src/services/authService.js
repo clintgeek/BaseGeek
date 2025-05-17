@@ -50,14 +50,19 @@ export const login = async (identifier, password, app) => {
         { email: identifier.toLowerCase() },
         { username: identifier.toLowerCase() }
       ]
-    });
+    }).select('+passwordHash');
 
     if (!user) {
       throw new Error('Invalid credentials');
     }
 
+    // Check for missing passwordHash
+    if (!user.passwordHash) {
+      throw new Error('User does not have a password set');
+    }
+
     // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
     if (!isValidPassword) {
       throw new Error('Invalid credentials');
     }
