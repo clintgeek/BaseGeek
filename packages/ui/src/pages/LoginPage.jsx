@@ -29,16 +29,25 @@ export default function LoginPage() {
         const result = await login(form.identifier, form.password, app);
         console.log('Login result:', result);
         if (result && result.token) {
+          try {
+            const payload = JSON.parse(atob(result.token.split('.')[1]));
+            console.log('JWT payload:', payload);
+          } catch (e) {
+            console.warn('Could not decode JWT payload:', e);
+          }
           // If redirectUrl is present and not just '/', redirect with token and state
           if (redirectUrl && redirectUrl !== '/') {
             const state = params.get('state');
             const url = new URL(decodeURIComponent(redirectUrl));
             url.searchParams.set('token', result.token);
             if (state) url.searchParams.set('state', state);
+            console.log('Redirecting to:', url.toString());
             window.location.href = url.toString();
           } else {
             navigate('/dashboard');
           }
+        } else {
+          console.warn('No token in login result:', result);
         }
       } else {
         // Register
@@ -46,15 +55,24 @@ export default function LoginPage() {
         const result = await register(form.identifier, form.email, form.password, app);
         console.log('Register result:', result);
         if (result && result.token) {
+          try {
+            const payload = JSON.parse(atob(result.token.split('.')[1]));
+            console.log('JWT payload:', payload);
+          } catch (e) {
+            console.warn('Could not decode JWT payload:', e);
+          }
           if (redirectUrl && redirectUrl !== '/') {
             const state = params.get('state');
             const url = new URL(decodeURIComponent(redirectUrl));
             url.searchParams.set('token', result.token);
             if (state) url.searchParams.set('state', state);
+            console.log('Redirecting to:', url.toString());
             window.location.href = url.toString();
           } else {
             navigate('/dashboard');
           }
+        } else {
+          console.warn('No token in register result:', result);
         }
       }
     } catch (err) {
