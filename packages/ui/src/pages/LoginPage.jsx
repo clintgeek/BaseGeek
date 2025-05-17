@@ -28,14 +28,31 @@ export default function LoginPage() {
         console.log('Login attempt:', form.identifier, form.password, app);
         const result = await login(form.identifier, form.password, app);
         if (result.success) {
-          navigate(redirectUrl);
+          // If redirectUrl is present and not just '/', redirect with token and state
+          if (redirectUrl && redirectUrl !== '/') {
+            const state = params.get('state');
+            const url = new URL(decodeURIComponent(redirectUrl));
+            url.searchParams.set('token', result.token);
+            if (state) url.searchParams.set('state', state);
+            window.location.href = url.toString();
+          } else {
+            navigate('/dashboard');
+          }
         }
       } else {
         // Register
         console.log('Register attempt:', form.identifier, form.email, form.password, app);
         const result = await register(form.identifier, form.email, form.password, app);
         if (result.success) {
-          navigate(redirectUrl);
+          if (redirectUrl && redirectUrl !== '/') {
+            const state = params.get('state');
+            const url = new URL(decodeURIComponent(redirectUrl));
+            url.searchParams.set('token', result.token);
+            if (state) url.searchParams.set('state', state);
+            window.location.href = url.toString();
+          } else {
+            navigate('/dashboard');
+          }
         }
       }
     } catch (err) {
