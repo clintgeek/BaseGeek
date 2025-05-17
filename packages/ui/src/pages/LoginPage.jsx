@@ -27,6 +27,7 @@ export default function LoginPage() {
         // Login
         console.log('Login attempt:', form.identifier, form.password, app);
         const result = await login(form.identifier, form.password, app);
+        console.log('Login result:', result);
         if (result && result.token) {
           // If redirectUrl is present and not just '/', redirect with token and state
           if (redirectUrl && redirectUrl !== '/') {
@@ -43,6 +44,7 @@ export default function LoginPage() {
         // Register
         console.log('Register attempt:', form.identifier, form.email, form.password, app);
         const result = await register(form.identifier, form.email, form.password, app);
+        console.log('Register result:', result);
         if (result && result.token) {
           if (redirectUrl && redirectUrl !== '/') {
             const state = params.get('state');
@@ -57,6 +59,7 @@ export default function LoginPage() {
       }
     } catch (err) {
       console.error('Form submission error:', err);
+      alert('Login error: ' + (err?.message || err));
     }
   };
 

@@ -74,7 +74,7 @@ const useSharedAuthStore = create(
                         payload: { token, user, app }
                     }, '*');
 
-                    return { success: true };
+                    return response.data;
                 } catch (error) {
                     const errorMessage = error.response?.data?.message || error.message || 'Login failed';
                     set({
@@ -85,7 +85,7 @@ const useSharedAuthStore = create(
                         user: null,
                         currentApp: null
                     });
-                    return { success: false, error: errorMessage };
+                    return { error: errorMessage };
                 }
             },
 
@@ -120,7 +120,7 @@ const useSharedAuthStore = create(
                         payload: { token, user, app }
                     }, '*');
 
-                    return { success: true };
+                    return response.data;
                 } catch (error) {
                     const errorMessage = error.response?.data?.message || error.message || 'Registration failed';
                     set({
@@ -131,7 +131,7 @@ const useSharedAuthStore = create(
                         user: null,
                         currentApp: null
                     });
-                    return { success: false, error: errorMessage };
+                    return { error: errorMessage };
                 }
             },
 
