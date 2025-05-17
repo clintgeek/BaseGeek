@@ -22,14 +22,24 @@ mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true 
   .catch(err => console.error('MongoDB connection error:', err));
 
 // Middleware
+const allowedOrigins = [
+  'http://localhost:5173',    // Vite dev server
+  'http://localhost:5001',    // Backend dev server
+  'https://basegeek.clintgeek.com',  // Production domain
+  'https://notegeek.clintgeek.com',  // NoteGeek production
+  'http://192.168.1.17:5173'  // Local network access
+];
+
 app.use(cors({
-  origin: [
-    'http://localhost:5173',    // Vite dev server
-    'http://localhost:5001',    // Backend dev server
-    'https://basegeek.clintgeek.com',  // Production domain
-    'https://notegeek.clintgeek.com',  // NoteGeek production
-    'http://192.168.1.17:5173'  // Local network access
-  ],
+  origin: function(origin, callback) {
+    // allow requests with no origin (like mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: [
