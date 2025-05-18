@@ -1,26 +1,56 @@
-# GeekSuite Authentication Migration Guide
+# GeekSuite Authentication Migration Guide (2024 Edition)
 
 ## Overview
-This guide provides step-by-step instructions for migrating GeekSuite applications to use BaseGeek's centralized authentication system. The migration process ensures secure, maintainable, and consistent authentication across all GeekSuite applications.
+This guide provides a **battle-tested, step-by-step process** for migrating any GeekSuite app to use BaseGeek's centralized authentication (SSO) system. It includes explicit instructions for Docker, environment variables, SSO callback handling, token management, and troubleshooting. **Follow this to avoid common pitfalls!**
 
 ## Prerequisites
 
-1. **BaseGeek Packages**
-   ```bash
-   # Install required packages
-   npm install @basegeek/ui @basegeek/api
-   ```
+### 1. BaseGeek Packages
+```bash
+npm install @basegeek/ui @basegeek/api zustand axios
+```
 
-2. **Environment Setup**
-   ```env
-   # Required environment variables
-   JWT_SECRET=your-secure-secret-key
-   JWT_REFRESH_SECRET=your-secure-refresh-secret-key
-   JWT_EXPIRES_IN=1h
-   REFRESH_TOKEN_EXPIRES_IN=7d
-   AUTH_RATE_LIMIT=5
-   AUTH_RATE_WINDOW=900000
-   ```
+### 2. Environment Variables (Critical!)
+
+#### A. Required Variables
+Set these in your backend API environment (BaseGeek):
+```env
+JWT_SECRET=your-very-strong-access-secret
+JWT_REFRESH_SECRET=your-very-strong-refresh-secret
+JWT_EXPIRES_IN=1h
+REFRESH_TOKEN_EXPIRES_IN=7d
+AUTH_RATE_LIMIT=5
+AUTH_RATE_WINDOW=900000
+```
+- **JWT_SECRET**: For access tokens (short-lived)
+- **JWT_REFRESH_SECRET**: For refresh tokens (long-lived, must be different from JWT_SECRET)
+
+#### B. Docker Compose Setup
+In your `docker-compose.yml` (for the API service):
+```yaml
+services:
+  basegeek_app:
+    build: .
+    container_name: basegeek_app
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - PORT=8987
+      - JWT_SECRET=your-very-strong-access-secret
+      - JWT_REFRESH_SECRET=your-very-strong-refresh-secret
+    # ...
+```
+- **Tip:** Setting secrets directly in `environment:` ensures they are always available, regardless of `.env` file issues.
+- **Verify:** After starting, run:
+  ```sh
+  docker compose exec basegeek_app printenv | grep JWT_REFRESH_SECRET
+  ```
+  You should see your secret printed.
+
+#### C. .env File Location
+- Place `.env.production` in the same directory as `docker-compose.yml` if you use `env_file:`.
+- **Restart containers** after any change: `docker compose down -v && docker compose up -d`
 
 ## Migration Steps
 
@@ -38,243 +68,100 @@ This guide provides step-by-step instructions for migrating GeekSuite applicatio
 }
 ```
 
-#### B. Replace Auth Store
-1. Remove existing auth store
-2. Import BaseGeek's shared auth store:
-```javascript
-import useSharedAuthStore from '@basegeek/ui/store/sharedAuthStore';
-```
+#### B. Shared Auth Store
+- Use BaseGeek's shared auth store for all token management.
+- **Store both `token` and `refreshToken`** after login/callback.
 
-#### C. Update Components
-1. **Login Component**
-```javascript
-import { useSharedAuthStore } from '@basegeek/ui/store/sharedAuthStore';
+#### C. SSO Redirect & Callback Handling
+- When redirecting from the SSO provider (BaseGeek) to your app, **always include both `token` and `refreshToken` in the callback URL**:
+  ```js
+  url.searchParams.set('token', result.token);
+  url.searchParams.set('refreshToken', result.refreshToken);
+  if (state) url.searchParams.set('state', state);
+  ```
+- In your callback handler, **store both tokens in the auth store**:
+  ```js
+  useSharedAuthStore.setState({
+    token,
+    refreshToken,
+    lastActivity: Date.now()
+  });
+  ```
+- **Validate the `state` parameter** to prevent CSRF.
 
-const LoginPage = () => {
-  const { login, error, isLoading } = useSharedAuthStore();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    await login(identifier, password, 'your-app-name');
-  };
-  // ... rest of the component
-};
-```
-
-2. **Protected Routes**
-```javascript
-import { ProtectedRoute } from '@basegeek/ui/components';
-
-const App = () => {
-  return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
+#### D. API Interceptor for Token Refresh
+- On 401, send `{ refreshToken }` to `/api/auth/refresh`:
+  ```js
+  const response = await axios.post(
+    `${BASE_GEEK_URL}/api/auth/refresh`,
+    { refreshToken },
+    { withCredentials: true }
   );
-};
-```
-
-3. **Auth Callback**
-```javascript
-import { AuthCallback } from '@basegeek/ui/components';
-
-const App = () => {
-  return (
-    <Routes>
-      <Route path="/auth/callback" element={<AuthCallback />} />
-    </Routes>
-  );
-};
-```
+  ```
+- Update both tokens in the store on success.
 
 ### 2. Backend Migration
 
-#### A. Update Dependencies
-```json
-{
-  "dependencies": {
-    "@basegeek/api": "latest",
-    "express": "^4.0.0",
-    "jsonwebtoken": "^9.0.0",
-    "bcryptjs": "^2.4.3"
-  }
-}
-```
+#### A. Environment Variables
+- See above. **Do not skip!**
 
-#### B. Configure Auth Middleware
-```javascript
-import { authenticateToken } from '@basegeek/api/middleware/auth';
+#### B. Refresh Endpoint
+- The refresh endpoint must accept `{ refreshToken }` in the body and verify it using `process.env.JWT_REFRESH_SECRET`.
+- If you see `JsonWebTokenError: secret or public key must be provided`, your secret is not set in the container.
 
-// Apply to protected routes
-router.use('/api/protected', authenticateToken);
-```
+#### C. Token Generation
+- Use different secrets for access and refresh tokens.
+- Always return both tokens on login/refresh.
 
-#### C. Update API Client
-```javascript
-import { createApiClient } from '@basegeek/api/client';
+### 3. Debugging & Troubleshooting
 
-const api = createApiClient({
-  baseURL: process.env.API_URL,
-  app: 'your-app-name'
-});
-```
+#### A. Docker Environment Issues
+- Use `printenv` inside the container to verify secrets are loaded.
+- If a secret is missing, check your `docker-compose.yml` and `.env` file locations.
+- Always restart containers after changes.
 
-### 3. Security Updates
+#### B. SSO Callback Issues
+- If you get a CSRF/state error, check that the `state` is set before redirect and validated on callback.
+- If the callback URL is missing `refreshToken`, update the SSO provider's redirect logic.
 
-#### A. CORS Configuration
-```javascript
-import cors from 'cors';
+#### C. Token Refresh Issues
+- If refresh fails with 400/401, check:
+  - Is `refreshToken` present in the request payload?
+  - Is the backend secret set and correct?
+  - Is the refresh token expired or malformed?
+- Use browser console logs to debug what is being sent.
 
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS.split(','),
-  credentials: true
-}));
-```
+#### D. Common Error Messages
+- `JsonWebTokenError: secret or public key must be provided`: Secret missing in backend container.
+- `401 Unauthorized` on refresh: Usually a bad or expired refresh token, or missing secret.
 
-#### B. CSRF Protection
-```javascript
-import { csrfProtection } from '@basegeek/api/middleware/security';
+### 4. Migration & Testing Checklist
 
-app.use(csrfProtection);
-```
-
-#### C. Rate Limiting
-```javascript
-import { rateLimiter } from '@basegeek/api/middleware/security';
-
-app.use('/api/auth', rateLimiter);
-```
-
-### 4. Testing
-
-#### A. Unit Tests
-```javascript
-import { useSharedAuthStore } from '@basegeek/ui/store/sharedAuthStore';
-
-describe('Auth Store', () => {
-  it('should handle login', async () => {
-    const { login } = useSharedAuthStore();
-    const result = await login('test@example.com', 'password', 'your-app');
-    expect(result.token).toBeDefined();
-  });
-});
-```
-
-#### B. Integration Tests
-```javascript
-describe('Auth Flow', () => {
-  it('should complete login flow', async () => {
-    // Test login
-    const loginResponse = await api.post('/auth/login', {
-      identifier: 'test@example.com',
-      password: 'password',
-      app: 'your-app'
-    });
-    expect(loginResponse.status).toBe(200);
-
-    // Test token refresh
-    const refreshResponse = await api.post('/auth/refresh', {
-      refreshToken: loginResponse.data.refreshToken,
-      app: 'your-app'
-    });
-    expect(refreshResponse.status).toBe(200);
-  });
-});
-```
-
-## Post-Migration Checklist
-
-1. **Security**
-   - [ ] Verify JWT secrets are properly set
-   - [ ] Confirm CORS is correctly configured
-   - [ ] Test CSRF protection
-   - [ ] Verify rate limiting
-
-2. **Functionality**
-   - [ ] Test login flow
-   - [ ] Verify token refresh
-   - [ ] Check protected routes
-   - [ ] Test error handling
-
-3. **Integration**
-   - [ ] Verify cross-app authentication
-   - [ ] Test shared user sessions
-   - [ ] Check token validation
-   - [ ] Verify user profile access
-
-4. **Performance**
-   - [ ] Monitor token validation speed
-   - [ ] Check refresh token performance
-   - [ ] Verify state management
-   - [ ] Test concurrent requests
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Token Validation Fails**
-   - Check JWT secrets match
-   - Verify token format
-   - Confirm expiration times
-
-2. **CORS Errors**
-   - Verify allowed origins
-   - Check credentials setting
-   - Confirm preflight requests
-
-3. **State Management Issues**
-   - Check store initialization
-   - Verify persistence
-   - Test cross-tab communication
-
-### Support
-
-For issues and support:
-1. Check the BaseGeek documentation
-2. Open an issue in the BaseGeek repository
-3. Contact the GeekSuite team
+- [ ] Set `JWT_SECRET` and `JWT_REFRESH_SECRET` in backend environment and verify with `printenv`.
+- [ ] Restart backend containers after any env change.
+- [ ] Ensure SSO callback URL includes both `token` and `refreshToken`.
+- [ ] Store both tokens in the frontend auth store.
+- [ ] On 401, send `{ refreshToken }` to `/api/auth/refresh`.
+- [ ] Update both tokens in the store after refresh.
+- [ ] Validate `state` parameter for CSRF protection.
+- [ ] Test login, token refresh, and protected routes.
+- [ ] Check browser and backend logs for errors.
 
 ## Best Practices
 
-1. **Security**
-   - Use HTTPS in production
-   - Implement proper error handling
-   - Follow OWASP guidelines
-   - Regular security audits
-
-2. **Performance**
-   - Implement caching
-   - Optimize token validation
-   - Monitor resource usage
-   - Regular performance testing
-
-3. **Maintenance**
-   - Keep dependencies updated
-   - Regular security patches
-   - Monitor error logs
-   - Regular backups
+- Use different secrets for access and refresh tokens.
+- Never commit secrets to version control.
+- Always validate the `state` parameter in SSO flows.
+- Use HTTPS in production.
+- Regularly rotate secrets and monitor logs.
 
 ## Example Implementations
 
-### NoteGeek
-- Uses shared auth store
-- Implements refresh tokens
-- Handles cross-app auth
-- Secure token storage
+- See `NoteGeek` and `BaseGeek` for reference SSO integration.
+- Use this guide as a checklist for every new GeekSuite app.
 
-### BuJoGeek
-- Custom UI components
-- Shared auth logic
-- Secure API integration
-- Error handling
+## Support
+- For issues, check the BaseGeek documentation, open an issue, or contact the GeekSuite team.
 
 ## Additional Resources
 

@@ -15,7 +15,7 @@ export const generateToken = (user, app = null) => {
   }
 
   const payload = {
-    userId: user._id,
+    id: user._id,
     username: user.username,
     email: user.email,
     app
@@ -90,14 +90,16 @@ export const login = async (identifier, password, app) => {
 export const validateToken = async (token) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await User.findById(decoded.userId);
+    console.log('Decoded JWT payload:', decoded); // Debug log
+    const user = await User.findById(decoded.id);
+    console.log('User found by decoded.id:', user); // Debug log
 
     if (!user) {
       throw new Error('User not found');
     }
 
     return {
-      userId: user._id,
+      id: user._id,
       username: user.username,
       email: user.email,
       app: decoded.app
