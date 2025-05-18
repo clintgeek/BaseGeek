@@ -40,6 +40,7 @@ export default function LoginPage() {
             const state = params.get('state');
             const url = new URL(decodeURIComponent(redirectUrl));
             url.searchParams.set('token', result.token);
+            url.searchParams.set('refreshToken', result.refreshToken);
             if (state) url.searchParams.set('state', state);
             console.log('Redirecting to:', url.toString());
             window.location.href = url.toString();
@@ -65,6 +66,7 @@ export default function LoginPage() {
             const state = params.get('state');
             const url = new URL(decodeURIComponent(redirectUrl));
             url.searchParams.set('token', result.token);
+            url.searchParams.set('refreshToken', result.refreshToken);
             if (state) url.searchParams.set('state', state);
             console.log('Redirecting to:', url.toString());
             window.location.href = url.toString();
