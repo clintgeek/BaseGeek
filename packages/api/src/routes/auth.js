@@ -212,16 +212,19 @@ router.post('/register', async (req, res) => {
 
         await user.save();
 
-        // Generate token
-        const token = await authService.generateToken(user, app);
+        // Generate tokens
+        const token = authService.generateToken(user, app);
+        const refreshToken = authService.generateRefreshToken(user);
 
         res.status(201).json({
             token,
+            refreshToken,
             user: {
                 id: user._id,
                 username: user.username,
                 email: user.email,
-                profile: user.profile
+                profile: user.profile,
+                app
             }
         });
     } catch (error) {

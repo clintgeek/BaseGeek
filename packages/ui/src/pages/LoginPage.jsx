@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, Paper, Tabs, Tab, TextField, Button, Typography, Alert, Divider } from '@mui/material';
 import AppsOutlinedIcon from '@mui/icons-material/AppsOutlined';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -11,10 +11,31 @@ export default function LoginPage() {
   const location = useLocation();
   const { login, register, error, isLoading } = useSharedAuthStore();
 
-  // Get redirect param from query string
+  // Get parameters from query string
   const params = new URLSearchParams(location.search);
   const redirectUrl = params.get('redirect') || '/';
+  const callbackUrl = params.get('callback') || null;
   const app = params.get('app') || 'basegeek';
+  const state = params.get('state') || null;
+
+  console.log('LoginPage initialized with:', {
+    redirectUrl,
+    callbackUrl: callbackUrl ? decodeURIComponent(callbackUrl) : null,
+    app,
+    state
+  });
+
+  // Display app info when available
+  const [appInfo, setAppInfo] = useState(null);
+  useEffect(() => {
+    if (app && app !== 'basegeek') {
+      // Here you could fetch app info from API if needed
+      setAppInfo({
+        name: app.charAt(0).toUpperCase() + app.slice(1),
+        description: `Sign in to access ${app.charAt(0).toUpperCase() + app.slice(1)}`
+      });
+    }
+  }, [app]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -23,63 +44,69 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      let result;
+
       if (tab === 0) {
         // Login
         console.log('Login attempt:', form.identifier, form.password, app);
-        const result = await login(form.identifier, form.password, app);
-        console.log('Login result:', result);
-        if (result && result.token) {
-          try {
-            const payload = JSON.parse(atob(result.token.split('.')[1]));
-            console.log('JWT payload:', payload);
-          } catch (e) {
-            console.warn('Could not decode JWT payload:', e);
-          }
-          // If redirectUrl is present and not just '/', redirect with token and state
-          if (redirectUrl && redirectUrl !== '/') {
-            const state = params.get('state');
-            const url = new URL(decodeURIComponent(redirectUrl));
-            url.searchParams.set('token', result.token);
-            url.searchParams.set('refreshToken', result.refreshToken);
-            if (state) url.searchParams.set('state', state);
-            console.log('Redirecting to:', url.toString());
-            window.location.href = url.toString();
-          } else {
-            navigate('/dashboard');
-          }
-        } else {
-          console.warn('No token in login result:', result);
-        }
+        result = await login(form.identifier, form.password, app);
       } else {
         // Register
         console.log('Register attempt:', form.identifier, form.email, form.password, app);
-        const result = await register(form.identifier, form.email, form.password, app);
-        console.log('Register result:', result);
-        if (result && result.token) {
+        result = await register(form.identifier, form.email, form.password, app);
+      }
+
+      console.log('Auth result:', result);
+
+      if (result && result.token) {
+        console.log('Authentication successful, token received');
+
+        // Handle redirection based on parameters
+        if (callbackUrl) {
+          // Decode the URL (it may be encoded)
+          const decodedCallbackUrl = decodeURIComponent(callbackUrl);
+          console.log('Decoded callback URL:', decodedCallbackUrl);
+
+          // SSO flow - redirect to the callback URL with tokens
           try {
-            const payload = JSON.parse(atob(result.token.split('.')[1]));
-            console.log('JWT payload:', payload);
-          } catch (e) {
-            console.warn('Could not decode JWT payload:', e);
-          }
-          if (redirectUrl && redirectUrl !== '/') {
-            const state = params.get('state');
-            const url = new URL(decodeURIComponent(redirectUrl));
+            const url = new URL(decodedCallbackUrl);
+
+            // Add token parameters
             url.searchParams.set('token', result.token);
-            url.searchParams.set('refreshToken', result.refreshToken);
-            if (state) url.searchParams.set('state', state);
-            console.log('Redirecting to:', url.toString());
+
+            if (result.refreshToken) {
+              url.searchParams.set('refreshToken', result.refreshToken);
+            }
+
+            url.searchParams.set('app', app);
+
+            // Add state parameter for CSRF protection if provided
+            if (state) {
+              url.searchParams.set('state', state);
+            }
+
+            console.log('Redirecting to callback URL:', url.toString());
             window.location.href = url.toString();
-          } else {
-            navigate('/dashboard');
+          } catch (urlError) {
+            console.error('Invalid callback URL:', decodedCallbackUrl, urlError);
+            alert('Invalid callback URL. Please try again.');
           }
+        } else if (redirectUrl && redirectUrl !== '/') {
+          // Custom redirect URL without SSO
+          const url = new URL(decodeURIComponent(redirectUrl));
+          console.log('Redirecting to custom URL:', url.toString());
+          window.location.href = url.toString();
         } else {
-          console.warn('No token in register result:', result);
+          // Default redirect to dashboard
+          navigate('/dashboard');
         }
+      } else {
+        console.warn('No token in auth result:', result);
+        alert('Authentication failed. Please try again.');
       }
     } catch (err) {
       console.error('Form submission error:', err);
-      alert('Login error: ' + (err?.message || err));
+      alert('Auth error: ' + (err?.message || err));
     }
   };
 
@@ -92,10 +119,24 @@ export default function LoginPage() {
             baseGeek
             <Typography component="span" sx={{ fontFamily: 'monospace', fontSize: '20px', fontWeight: 'bold', ml: 0.5, mt: 0.5 }}>{'</>'}</Typography>
           </Typography>
-          <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-            Welcome to the geekAPPs suite
-          </Typography>
+
+          {appInfo ? (
+            <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+              {appInfo.description}
+            </Typography>
+          ) : (
+            <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+              Welcome to the geekAPPs suite
+            </Typography>
+          )}
         </Box>
+
+        {app !== 'basegeek' && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            You're signing in via BaseGeek to access {app.charAt(0).toUpperCase() + app.slice(1)}
+          </Alert>
+        )}
+
         <Divider sx={{ mb: 2 }} />
         <Tabs value={tab} onChange={(_, v) => setTab(v)} centered sx={{ mb: 2 }}>
           <Tab label="Login" />

@@ -6,11 +6,13 @@ const useSharedAuthStore = create(
     persist(
         (set, get) => ({
             token: null,
+            refreshToken: null,
             user: null,
             isAuthenticated: false,
             isLoading: false,
             error: null,
             currentApp: null,
+            lastActivity: null,
 
             // Initialize auth state
             initialize: async (app) => {
@@ -28,13 +30,25 @@ const useSharedAuthStore = create(
                             user: response.data.user,
                             isAuthenticated: true,
                             currentApp: app,
-                            error: null
+                            error: null,
+                            lastActivity: Date.now()
                         });
                         return true;
                     }
                 } catch (error) {
+                    // Try to refresh the token if we have a refresh token
+                    if (state.refreshToken) {
+                        try {
+                            const refreshResult = await get().refreshToken();
+                            if (refreshResult) return true;
+                        } catch (refreshError) {
+                            console.error('Failed to refresh token during initialize:', refreshError);
+                        }
+                    }
+
                     set({
                         token: null,
+                        refreshToken: null,
                         user: null,
                         isAuthenticated: false,
                         currentApp: null,
@@ -56,24 +70,26 @@ const useSharedAuthStore = create(
                     });
 
                     console.log('sharedAuthStore login response.data:', response.data);
-                    const { token, user } = response.data;
+                    const { token, refreshToken, user } = response.data;
                     if (!token || !user) {
                         throw new Error('Invalid response from server');
                     }
 
                     set({
                         token,
+                        refreshToken,
                         user,
                         isAuthenticated: true,
                         currentApp: app,
                         error: null,
-                        isLoading: false
+                        isLoading: false,
+                        lastActivity: Date.now()
                     });
 
                     // Broadcast auth state change
                     window.postMessage({
                         type: 'GEEK_AUTH_STATE_CHANGE',
-                        payload: { token, user, app }
+                        payload: { token, refreshToken, user, app }
                     }, '*');
 
                     console.log('sharedAuthStore login returning:', response.data);
@@ -85,6 +101,7 @@ const useSharedAuthStore = create(
                         isLoading: false,
                         isAuthenticated: false,
                         token: null,
+                        refreshToken: null,
                         user: null,
                         currentApp: null
                     });
@@ -104,24 +121,26 @@ const useSharedAuthStore = create(
                         app
                     });
 
-                    const { token, user } = response.data;
+                    const { token, refreshToken, user } = response.data;
                     if (!token || !user) {
                         throw new Error('Invalid response from server');
                     }
 
                     set({
                         token,
+                        refreshToken,
                         user,
                         isAuthenticated: true,
                         currentApp: app,
                         error: null,
-                        isLoading: false
+                        isLoading: false,
+                        lastActivity: Date.now()
                     });
 
                     // Broadcast auth state change
                     window.postMessage({
                         type: 'GEEK_AUTH_STATE_CHANGE',
-                        payload: { token, user, app }
+                        payload: { token, refreshToken, user, app }
                     }, '*');
 
                     return response.data;
@@ -132,6 +151,7 @@ const useSharedAuthStore = create(
                         isLoading: false,
                         isAuthenticated: false,
                         token: null,
+                        refreshToken: null,
                         user: null,
                         currentApp: null
                     });
@@ -143,16 +163,18 @@ const useSharedAuthStore = create(
             logout: () => {
                 set({
                     token: null,
+                    refreshToken: null,
                     user: null,
                     isAuthenticated: false,
                     currentApp: null,
-                    error: null
+                    error: null,
+                    lastActivity: null
                 });
 
                 // Broadcast logout
                 window.postMessage({
                     type: 'GEEK_AUTH_STATE_CHANGE',
-                    payload: { token: null, user: null, app: null }
+                    payload: { token: null, refreshToken: null, user: null, app: null }
                 }, '*');
             },
 
@@ -178,13 +200,25 @@ const useSharedAuthStore = create(
                         set({
                             user: response.data.user,
                             isAuthenticated: true,
-                            error: null
+                            error: null,
+                            lastActivity: Date.now()
                         });
                         return true;
                     }
                 } catch (error) {
+                    // Try to refresh the token
+                    if (state.refreshToken) {
+                        try {
+                            const refreshResult = await get().refreshToken();
+                            if (refreshResult) return true;
+                        } catch (refreshError) {
+                            console.error('Failed to refresh token during checkAuth:', refreshError);
+                        }
+                    }
+
                     set({
                         token: null,
+                        refreshToken: null,
                         user: null,
                         isAuthenticated: false,
                         currentApp: null,
@@ -197,32 +231,35 @@ const useSharedAuthStore = create(
             // Refresh token
             refreshToken: async () => {
                 const state = get();
-                if (!state.token || !state.currentApp) return false;
+                if (!state.refreshToken || !state.currentApp) return false;
 
                 try {
                     const response = await axios.post('/api/auth/refresh', {
-                        token: state.token,
+                        refreshToken: state.refreshToken,
                         app: state.currentApp
                     });
 
-                    const { token, user } = response.data;
+                    const { token, refreshToken, user } = response.data;
                     set({
                         token,
+                        refreshToken,
                         user,
                         isAuthenticated: true,
-                        error: null
+                        error: null,
+                        lastActivity: Date.now()
                     });
 
                     // Broadcast token refresh
                     window.postMessage({
                         type: 'GEEK_AUTH_STATE_CHANGE',
-                        payload: { token, user, app: state.currentApp }
+                        payload: { token, refreshToken, user, app: state.currentApp }
                     }, '*');
 
                     return true;
                 } catch (error) {
                     set({
                         token: null,
+                        refreshToken: null,
                         user: null,
                         isAuthenticated: false,
                         currentApp: null,
@@ -236,9 +273,11 @@ const useSharedAuthStore = create(
             name: 'geek-shared-auth',
             partialize: (state) => ({
                 token: state.token,
+                refreshToken: state.refreshToken,
                 user: state.user,
                 isAuthenticated: state.isAuthenticated,
-                currentApp: state.currentApp
+                currentApp: state.currentApp,
+                lastActivity: state.lastActivity
             })
         }
     )
@@ -248,12 +287,14 @@ const useSharedAuthStore = create(
 if (typeof window !== 'undefined') {
     window.addEventListener('message', (event) => {
         if (event.data.type === 'GEEK_AUTH_STATE_CHANGE') {
-            const { token, user, app } = event.data.payload;
+            const { token, refreshToken, user, app } = event.data.payload;
             useSharedAuthStore.setState({
                 token,
+                refreshToken,
                 user,
                 isAuthenticated: !!token,
-                currentApp: app
+                currentApp: app,
+                lastActivity: Date.now()
             });
         }
     });
