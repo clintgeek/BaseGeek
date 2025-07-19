@@ -1,9 +1,10 @@
-import { Box, Typography, Paper, Card, CardContent, Grid, Chip, Avatar } from '@mui/material';
+import { Box, Typography, Paper, Card, CardContent, Grid, Chip, Avatar, Tooltip } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
   Note as NoteIcon,
   Book as BookIcon,
-  FitnessCenter as FitnessIcon
+  FitnessCenter as FitnessIcon,
+  Circle as CircleIcon
 } from '@mui/icons-material';
 
 export default function BaseGeekHome() {
@@ -15,7 +16,9 @@ export default function BaseGeekHome() {
       description: 'Central authentication and user management hub',
       icon: DashboardIcon,
       color: '#1976d2',
-      status: 'active'
+      status: 'active',
+      online: true, // TODO: Replace with actual health check
+      url: 'https://basegeek.clintgeek.com'
     },
     {
       name: 'notegeek',
@@ -23,7 +26,9 @@ export default function BaseGeekHome() {
       description: 'Markdown-based note-taking and organization',
       icon: NoteIcon,
       color: '#2e7d32',
-      status: 'active'
+      status: 'active',
+      online: true, // TODO: Replace with actual health check
+      url: 'https://notegeek.clintgeek.com'
     },
     {
       name: 'bujogeek',
@@ -31,7 +36,9 @@ export default function BaseGeekHome() {
       description: 'Bullet journal and task management system',
       icon: BookIcon,
       color: '#ed6c02',
-      status: 'active'
+      status: 'active',
+      online: true, // TODO: Replace with actual health check
+      url: 'https://bujogeek.clintgeek.com'
     },
     {
       name: 'fitnessgeek',
@@ -39,7 +46,9 @@ export default function BaseGeekHome() {
       description: 'Nutrition tracking and fitness management',
       icon: FitnessIcon,
       color: '#9c27b0',
-      status: 'active'
+      status: 'active',
+      online: true, // TODO: Replace with actual health check
+      url: 'https://fitnessgeek.clintgeek.com'
     }
   ];
 
@@ -88,18 +97,38 @@ export default function BaseGeekHome() {
                   >
                     <app.icon />
                   </Avatar>
-                  <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-                    {app.displayName}
-                  </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mr: 1 }}>
+                      {app.displayName}
+                    </Typography>
+                    <Tooltip title={app.online ? 'Online' : 'Offline'}>
+                      <CircleIcon
+                        sx={{
+                          fontSize: 12,
+                          color: app.online ? 'success.main' : 'error.main',
+                          filter: app.online ? 'drop-shadow(0 0 4px rgba(76, 175, 80, 0.6))' : 'none'
+                        }}
+                      />
+                    </Tooltip>
+                  </Box>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     {app.description}
                   </Typography>
-                  <Chip
-                    label={app.status}
-                    size="small"
-                    color="success"
-                    variant="outlined"
-                  />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Chip
+                      label={app.status}
+                      size="small"
+                      color="success"
+                      variant="outlined"
+                    />
+                    <Chip
+                      label={app.online ? 'Online' : 'Offline'}
+                      size="small"
+                      color={app.online ? 'success' : 'error'}
+                      variant="filled"
+                      sx={{ fontSize: '0.7rem' }}
+                    />
+                  </Box>
                 </CardContent>
               </Card>
             </Grid>

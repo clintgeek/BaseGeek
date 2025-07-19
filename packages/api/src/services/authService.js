@@ -39,8 +39,10 @@ export const generateRefreshToken = (user) => {
 // Login user
 export const login = async (identifier, password, app) => {
   try {
+    console.log('Login attempt:', { identifier, app, VALID_APPS }); // Debug log
     // Validate app
     if (!app || !VALID_APPS.includes(app.toLowerCase())) {
+      console.log('App validation failed:', { app, VALID_APPS, includes: VALID_APPS.includes(app.toLowerCase()) }); // Debug log
       throw new Error('Invalid app');
     }
 
