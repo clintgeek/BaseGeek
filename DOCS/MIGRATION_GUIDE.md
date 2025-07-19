@@ -1,181 +1,396 @@
-# GeekSuite Authentication Migration Guide (2024 Edition)
+# GeekSuite SSO Migration Guide (2024, Proven Edition)
 
 ## Overview
-This guide provides a **battle-tested, step-by-step process** for migrating any GeekSuite app to use BaseGeek's centralized authentication (SSO) system. It includes explicit instructions for Docker, environment variables, SSO callback handling, token management, and troubleshooting. **Follow this to avoid common pitfalls!**
+This guide is the **definitive, real-world checklist** for migrating any GeekSuite app to use BaseGeek SSO. It is based on the working NoteGeek integration and eliminates all unnecessary steps. **Follow this for a smooth, secure SSO experience.**
 
-## Prerequisites
+---
 
-### 1. BaseGeek Packages
+## 1. Prerequisites
+
+### A. Dependencies (Frontend)
 ```bash
-npm install @basegeek/ui @basegeek/api zustand axios
+# Core dependencies
+npm install zustand axios react-router-dom
+
+# Optional: If using shared UI package
+npm install @basegeek/ui
 ```
 
-### 2. Environment Variables (Critical!)
+### B. Dependencies (Backend)
+```bash
+# Core dependencies
+npm install jsonwebtoken cors dotenv
 
-#### A. Required Variables
+# Optional: For enhanced security
+npm install express-rate-limit helmet
+```
+
+### C. Environment Variables (Backend)
 Set these in your backend API environment (BaseGeek):
 ```env
+# Required
 JWT_SECRET=your-very-strong-access-secret
 JWT_REFRESH_SECRET=your-very-strong-refresh-secret
 JWT_EXPIRES_IN=1h
 REFRESH_TOKEN_EXPIRES_IN=7d
-AUTH_RATE_LIMIT=5
-AUTH_RATE_WINDOW=900000
+
+# Optional: For enhanced security
+RATE_LIMIT_WINDOW_MS=900000  # 15 minutes
+RATE_LIMIT_MAX_REQUESTS=100
 ```
-- **JWT_SECRET**: For access tokens (short-lived)
-- **JWT_REFRESH_SECRET**: For refresh tokens (long-lived, must be different from JWT_SECRET)
 
-#### B. Docker Compose Setup
-In your `docker-compose.yml` (for the API service):
-```yaml
-services:
-  basegeek_app:
-    build: .
-    container_name: basegeek_app
-    env_file:
-      - .env.production
-    environment:
-      - NODE_ENV=production
-      - PORT=8987
-      - JWT_SECRET=your-very-strong-access-secret
-      - JWT_REFRESH_SECRET=your-very-strong-refresh-secret
-    # ...
+### D. Environment Variables (Frontend)
+```env
+# Required
+VITE_API_URL=http://localhost:5001/api
+VITE_BASEGEEK_URL=https://basegeek.clintgeek.com
+VITE_APP_NAME=yourappname  # Used in JWT app verification
 ```
-- **Tip:** Setting secrets directly in `environment:` ensures they are always available, regardless of `.env` file issues.
-- **Verify:** After starting, run:
-  ```sh
-  docker compose exec basegeek_app printenv | grep JWT_REFRESH_SECRET
-  ```
-  You should see your secret printed.
 
-#### C. .env File Location
-- Place `.env.production` in the same directory as `docker-compose.yml` if you use `env_file:`.
-- **Restart containers** after any change: `docker compose down -v && docker compose up -d`
+---
 
-## Migration Steps
+## 2. Frontend Migration (Client App)
 
-### 1. Frontend Migration
+### A. Remove Local User DB
+- **Do NOT** create or sync a user database in the client app
+- All user info comes from the SSO token
+- Remove any existing user registration/login forms
+- Remove any user-related database models
 
-#### A. Update Dependencies
-```json
-{
-  "dependencies": {
-    "@basegeek/ui": "latest",
-    "@basegeek/api": "latest",
-    "zustand": "^4.0.0",
-    "axios": "^1.0.0"
+### B. Auth Store Setup
+Create `src/store/authStore.js`:
+```js
+import { create } from 'zustand';
+import axios from 'axios';
+
+const useAuthStore = create((set) => ({
+  token: null,
+  refreshToken: null,
+  user: null,
+  isAuthenticated: false,
+
+  setAuth: ({ token, refreshToken }) => {
+    set({
+      token,
+      refreshToken,
+      isAuthenticated: !!token,
+      user: decodeJwt(token)
+    });
+  },
+
+  logout: () => {
+    set({
+      token: null,
+      refreshToken: null,
+      user: null,
+      isAuthenticated: false
+    });
+    // Optional: Call BaseGeek logout
+    window.location.href = `${import.meta.env.VITE_BASEGEEK_URL}/logout`;
   }
+}));
+
+function decodeJwt(token) {
+  if (!token) return null;
+  try {
+    return JSON.parse(atob(token.split('.')[1]));
+  } catch {
+    return null;
+  }
+}
+
+export default useAuthStore;
+```
+
+### C. SSO Login Flow
+1. **Create Login Component** (`src/components/Login.jsx`):
+```jsx
+import { useEffect } from 'react';
+import useAuthStore from '../store/authStore';
+
+export default function Login() {
+  const setAuth = useAuthStore(state => state.setAuth);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const refreshToken = params.get('refreshToken');
+    const state = params.get('state');
+
+    // Verify state parameter (CSRF protection)
+    if (state !== localStorage.getItem('sso_state')) {
+      console.error('Invalid state parameter');
+      return;
+    }
+
+    if (token && refreshToken) {
+      setAuth({ token, refreshToken });
+      // Redirect to app home
+      window.location.href = '/';
+    } else {
+      // Redirect to BaseGeek login
+      const state = Math.random().toString(36).substring(7);
+      localStorage.setItem('sso_state', state);
+      window.location.href = `${import.meta.env.VITE_BASEGEEK_URL}/login?redirectTo=${encodeURIComponent(window.location.href)}&state=${state}`;
+    }
+  }, [setAuth]);
+
+  return <div>Logging in...</div>;
 }
 ```
 
-#### B. Shared Auth Store
-- Use BaseGeek's shared auth store for all token management.
-- **Store both `token` and `refreshToken`** after login/callback.
+2. **Add Protected Route Component** (`src/components/ProtectedRoute.jsx`):
+```jsx
+import { Navigate } from 'react-router-dom';
+import useAuthStore from '../store/authStore';
 
-#### C. SSO Redirect & Callback Handling
-- When redirecting from the SSO provider (BaseGeek) to your app, **always include both `token` and `refreshToken` in the callback URL**:
-  ```js
-  url.searchParams.set('token', result.token);
-  url.searchParams.set('refreshToken', result.refreshToken);
-  if (state) url.searchParams.set('state', state);
-  ```
-- In your callback handler, **store both tokens in the auth store**:
-  ```js
-  useSharedAuthStore.setState({
-    token,
-    refreshToken,
-    lastActivity: Date.now()
+export default function ProtectedRoute({ children }) {
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  return children;
+}
+```
+
+### D. API Client Setup
+Create `src/services/api.js`:
+```js
+import axios from 'axios';
+import useAuthStore from '../store/authStore';
+
+const apiClient = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  withCredentials: true,
+});
+
+// Request interceptor
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = useAuthStore.getState().token;
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response interceptor
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = useAuthStore.getState().refreshToken;
+        const { data } = await axios.post(
+          `${import.meta.env.VITE_BASEGEEK_URL}/api/auth/refresh`,
+          { refreshToken }
+        );
+
+        useAuthStore.getState().setAuth({
+          token: data.token,
+          refreshToken: data.refreshToken
+        });
+
+        originalRequest.headers.Authorization = `Bearer ${data.token}`;
+        return axios(originalRequest);
+      } catch (refreshError) {
+        useAuthStore.getState().logout();
+        return Promise.reject(refreshError);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+export default apiClient;
+```
+
+---
+
+## 3. Backend Migration (API)
+
+### A. Remove User DB (Client App)
+- **Do NOT** require a user DB in the client app
+- All user info is in the JWT
+- Remove any user-related database models
+- Remove any user registration/login endpoints
+
+### B. Auth Middleware
+Create `src/middleware/auth.js`:
+```js
+import jwt from 'jsonwebtoken';
+
+export const protect = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'No token' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Verify app name matches
+    if (decoded.app !== process.env.APP_NAME) {
+      return res.status(401).json({ message: 'Invalid app' });
+    }
+
+    req.user = decoded;
+    next();
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Token expired' });
+    }
+    return res.status(401).json({ message: 'Invalid token' });
+  }
+};
+```
+
+### C. Resource Ownership
+Example of using `req.user.id` for resource queries:
+```js
+// Example: Get user's notes
+router.get('/notes', protect, async (req, res) => {
+  const notes = await Note.find({ userId: req.user.id });
+  res.json(notes);
+});
+
+// Example: Create note
+router.post('/notes', protect, async (req, res) => {
+  const note = await Note.create({
+    ...req.body,
+    userId: req.user.id
   });
-  ```
-- **Validate the `state` parameter** to prevent CSRF.
+  res.json(note);
+});
+```
 
-#### D. API Interceptor for Token Refresh
-- On 401, send `{ refreshToken }` to `/api/auth/refresh`:
-  ```js
-  const response = await axios.post(
-    `${BASE_GEEK_URL}/api/auth/refresh`,
-    { refreshToken },
-    { withCredentials: true }
-  );
-  ```
-- Update both tokens in the store on success.
+### D. Token Refresh Endpoint
+Create `src/routes/auth.js`:
+```js
+import express from 'express';
+import jwt from 'jsonwebtoken';
 
-### 2. Backend Migration
+const router = express.Router();
 
-#### A. Environment Variables
-- See above. **Do not skip!**
+router.post('/refresh', async (req, res) => {
+  const { refreshToken } = req.body;
 
-#### B. Refresh Endpoint
-- The refresh endpoint must accept `{ refreshToken }` in the body and verify it using `process.env.JWT_REFRESH_SECRET`.
-- If you see `JsonWebTokenError: secret or public key must be provided`, your secret is not set in the container.
+  if (!refreshToken) {
+    return res.status(400).json({ message: 'Refresh token required' });
+  }
 
-#### C. Token Generation
-- Use different secrets for access and refresh tokens.
-- Always return both tokens on login/refresh.
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
-### 3. Debugging & Troubleshooting
+    // Create new tokens
+    const token = jwt.sign(
+      { id: decoded.id, email: decoded.email, app: process.env.APP_NAME },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN }
+    );
 
-#### A. Docker Environment Issues
-- Use `printenv` inside the container to verify secrets are loaded.
-- If a secret is missing, check your `docker-compose.yml` and `.env` file locations.
-- Always restart containers after changes.
+    const newRefreshToken = jwt.sign(
+      { id: decoded.id },
+      process.env.JWT_REFRESH_SECRET,
+      { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN }
+    );
 
-#### B. SSO Callback Issues
-- If you get a CSRF/state error, check that the `state` is set before redirect and validated on callback.
-- If the callback URL is missing `refreshToken`, update the SSO provider's redirect logic.
+    res.json({ token, refreshToken: newRefreshToken });
+  } catch (err) {
+    return res.status(401).json({ message: 'Invalid refresh token' });
+  }
+});
 
-#### C. Token Refresh Issues
-- If refresh fails with 400/401, check:
-  - Is `refreshToken` present in the request payload?
-  - Is the backend secret set and correct?
-  - Is the refresh token expired or malformed?
-- Use browser console logs to debug what is being sent.
+export default router;
+```
 
-#### D. Common Error Messages
-- `JsonWebTokenError: secret or public key must be provided`: Secret missing in backend container.
-- `401 Unauthorized` on refresh: Usually a bad or expired refresh token, or missing secret.
+---
 
-### 4. Migration & Testing Checklist
+## 4. What NOT To Do
+- **Do NOT** create or sync a user DB in the client app
+- **Do NOT** try to "register" users in the client app
+- **Do NOT** store user passwords in the client app
+- **Do NOT** use the refresh token as an access token
+- **Do NOT** skip CSRF/state validation in the SSO callback
+- **Do NOT** store sensitive user data in the client app
+- **Do NOT** implement your own token refresh logic
+- **Do NOT** modify the JWT payload structure
 
-- [ ] Set `JWT_SECRET` and `JWT_REFRESH_SECRET` in backend environment and verify with `printenv`.
-- [ ] Restart backend containers after any env change.
-- [ ] Ensure SSO callback URL includes both `token` and `refreshToken`.
-- [ ] Store both tokens in the frontend auth store.
-- [ ] On 401, send `{ refreshToken }` to `/api/auth/refresh`.
-- [ ] Update both tokens in the store after refresh.
-- [ ] Validate `state` parameter for CSRF protection.
-- [ ] Test login, token refresh, and protected routes.
-- [ ] Check browser and backend logs for errors.
+---
 
-## Best Practices
+## 5. Testing Checklist
+- [ ] Set all required environment variables
+- [ ] Restart backend after env changes
+- [ ] Test SSO login flow:
+  - [ ] Redirect to BaseGeek
+  - [ ] Successful callback
+  - [ ] Token storage
+  - [ ] User info decoding
+- [ ] Test token refresh:
+  - [ ] Automatic refresh on 401
+  - [ ] New token storage
+  - [ ] Request retry
+- [ ] Test protected routes:
+  - [ ] Access with valid token
+  - [ ] Block with invalid token
+  - [ ] Block with expired token
+- [ ] Test logout:
+  - [ ] Clear tokens
+  - [ ] Redirect to login
+- [ ] Verify CSRF protection:
+  - [ ] State parameter validation
+  - [ ] Invalid state rejection
+- [ ] Check error handling:
+  - [ ] Invalid token
+  - [ ] Expired token
+  - [ ] Missing token
+  - [ ] Invalid app name
 
-- Use different secrets for access and refresh tokens.
-- Never commit secrets to version control.
-- Always validate the `state` parameter in SSO flows.
-- Use HTTPS in production.
-- Regularly rotate secrets and monitor logs.
+---
 
-## Example Implementations
+## 6. Common Issues & Solutions
 
-- See `NoteGeek` and `BaseGeek` for reference SSO integration.
-- Use this guide as a checklist for every new GeekSuite app.
+### A. CORS Issues
+```js
+// Backend CORS configuration
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://yourapp.clintgeek.com'
+  ],
+  credentials: true
+}));
+```
 
-## Support
-- For issues, check the BaseGeek documentation, open an issue, or contact the GeekSuite team.
+### B. Token Refresh Loop
+- Check refresh token expiration
+- Verify JWT secrets are different
+- Ensure proper error handling
 
-## Additional Resources
+### C. State Parameter Issues
+- Use localStorage for state persistence
+- Clear state after validation
+- Handle missing state parameter
 
-1. **Documentation**
-   - BaseGeek Auth System
-   - API Reference
-   - Security Guidelines
+### D. Environment Variables
+- Double-check all required variables
+- Verify values are properly set
+- Check for typos in variable names
 
-2. **Tools**
-   - JWT Debugger
-   - API Testing Tools
-   - Security Scanners
+---
 
-3. **Support**
-   - GeekSuite Team
-   - BaseGeek Repository
-   - Community Forums
+## 7. Support
+- For issues, check the BaseGeek documentation
+- Open an issue in the GeekSuite repository
+- Contact the GeekSuite team
+- Check the troubleshooting guide in `DOCS/TROUBLESHOOTING.md`

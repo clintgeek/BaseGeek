@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 
-const VALID_APPS = ['basegeek', 'notegeek'];
+const VALID_APPS = ['basegeek', 'notegeek', 'bujogeek', 'fitnessgeek'];
 
 export const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];

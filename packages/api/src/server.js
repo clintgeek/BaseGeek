@@ -24,10 +24,13 @@ mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true 
 // Middleware
 const allowedOrigins = [
   'http://localhost:5173',    // Vite dev server
+  'http://localhost:5174',    // Vite dev server (alternative port)
   'http://localhost:5001',    // Backend dev server
   'https://basegeek.clintgeek.com',  // Production domain
   'https://notegeek.clintgeek.com',  // NoteGeek production
-  'http://192.168.1.17:5173'  // Local network access
+  'https://fitnessgeek.clintgeek.com',  // FitnessGeek production
+  'http://192.168.1.17:5173',  // Local network access
+  'http://192.168.1.17:5174'   // Local network access (alternative port)
 ];
 
 app.use(cors({
