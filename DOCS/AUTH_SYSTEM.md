@@ -84,7 +84,7 @@ Request:
 {
     "identifier": "string",  // username or email
     "password": "string",
-    "app": "string"         // 'basegeek', 'notegeek', or 'bujogeek'
+    "app": "string"         // 'basegeek', 'notegeek', 'bujogeek', 'fitnessgeek', or 'storygeek'
 }
 ```
 Response:
