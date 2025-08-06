@@ -26,6 +26,7 @@ const allowedOrigins = [
   'http://localhost:5173',    // Vite dev server
   'http://localhost:5174',    // Vite dev server (alternative port)
   'http://localhost:5001',    // Backend dev server
+  'http://localhost:3000',    // StoryGeek frontend
   'https://basegeek.clintgeek.com',  // Production domain
   'https://notegeek.clintgeek.com',  // NoteGeek production
   'https://fitnessgeek.clintgeek.com',  // FitnessGeek production
