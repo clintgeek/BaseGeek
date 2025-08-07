@@ -347,12 +347,14 @@ class AIService {
 
       return result.content;
     } catch (error) {
-      console.log(`Primary provider ${provider} failed, trying fallbacks...`);
+      console.log(`Primary provider ${provider} failed:`, error.message);
+      console.log(`Trying fallbacks: ${this.fallbackOrder.filter(p => p !== provider).join(' → ')}`);
 
       // Try fallback providers
       for (const fallbackProvider of this.fallbackOrder) {
         if (fallbackProvider !== provider) {
           try {
+            console.log(`Trying fallback provider: ${fallbackProvider}`);
             const result = await this.callProvider(fallbackProvider, prompt, { maxTokens, temperature });
 
             // Track usage in session stats for fallback
@@ -367,6 +369,7 @@ class AIService {
               requests: 1
             });
 
+            console.log(`Fallback provider ${fallbackProvider} succeeded`);
             return result.content;
           } catch (fallbackError) {
             console.log(`Fallback provider ${fallbackProvider} failed:`, fallbackError.message);
@@ -426,7 +429,7 @@ class AIService {
           'x-api-key': this.providers.anthropic.apiKey,
           'anthropic-version': '2023-06-01'
         },
-        timeout: 30000
+        timeout: 60000
       });
 
       const result = response.data.content[0].text;
@@ -464,7 +467,7 @@ class AIService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.providers.groq.apiKey}`
         },
-        timeout: 30000
+        timeout: 60000
       });
 
       const result = response.data.choices[0].message.content;
@@ -508,7 +511,7 @@ class AIService {
         params: {
           key: this.providers.gemini.apiKey
         },
-        timeout: 30000
+        timeout: 60000
       });
 
       const result = response.data.candidates[0].content.parts[0].text;
@@ -547,7 +550,7 @@ class AIService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.providers.together.apiKey}`
         },
-        timeout: 30000
+        timeout: 60000
       });
 
       const result = response.data.choices[0].message.content;
