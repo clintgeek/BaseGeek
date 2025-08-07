@@ -311,6 +311,7 @@ class AIDirectorService {
 
   async seedFreeTierInformation() {
     try {
+      console.log('Seeding free tier information...');
       const freeTierData = [
         // Groq Free Tier - ALL models are free with same limits
         // Based on https://console.groq.com/docs/rate-limits
@@ -695,6 +696,7 @@ class AIDirectorService {
       }
 
       console.log('Free tier information seeded successfully');
+      console.log(`Seeded ${freeTierData.length} free tier records`);
     } catch (error) {
       console.error('Failed to seed free tier information:', error);
     }

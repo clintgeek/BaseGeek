@@ -208,6 +208,16 @@ class AIUsageService {
         date: currentDay
       });
 
+      console.log(`Found ${usageRecords.length} usage records for ${provider}/${userId}`);
+      usageRecords.forEach(record => {
+        console.log(`Usage record for ${record.modelId}:`, {
+          requests: record.currentDay.requests,
+          tokens: record.currentDay.tokens,
+          limits: record.freeLimits,
+          percentages: record.usagePercentages
+        });
+      });
+
       const summary = {
         totalRequests: 0,
         totalTokens: 0,
