@@ -647,6 +647,8 @@ class AIService {
     this.sessionStats.totalTokens += totalTokens;
     this.sessionStats.totalCost += actualCost;
 
+    console.log(`Updated session stats: calls=${this.sessionStats.totalCalls}, tokens=${this.sessionStats.totalTokens}, cost=${this.sessionStats.totalCost}`);
+
         if (!this.sessionStats.providerUsage[provider]) {
       this.sessionStats.providerUsage[provider] = {
         calls: 0,
@@ -661,6 +663,8 @@ class AIService {
     this.sessionStats.providerUsage[provider].calls++;
     this.sessionStats.providerUsage[provider].tokens += totalTokens;
     this.sessionStats.providerUsage[provider].cost += actualCost;
+
+    console.log(`Updated provider stats for ${provider}: calls=${this.sessionStats.providerUsage[provider].calls}, tokens=${this.sessionStats.providerUsage[provider].tokens}, cost=${this.sessionStats.providerUsage[provider].cost}`);
 
     // Track app usage
     if (!this.sessionStats.providerUsage[provider].appUsage[appName]) {
@@ -677,6 +681,8 @@ class AIService {
     this.sessionStats.providerUsage[provider].appUsage[appName].tokens += totalTokens;
     this.sessionStats.providerUsage[provider].appUsage[appName].cost += actualCost;
 
+    console.log(`Updated app stats for ${provider}/${appName}: calls=${this.sessionStats.providerUsage[provider].appUsage[appName].calls}, tokens=${this.sessionStats.providerUsage[provider].appUsage[appName].tokens}, cost=${this.sessionStats.providerUsage[provider].appUsage[appName].cost}`);
+
     if (isFreeUsage) {
       this.sessionStats.providerUsage[provider].freeCalls =
         (this.sessionStats.providerUsage[provider].freeCalls || 0) + 1;
@@ -692,6 +698,7 @@ class AIService {
    * Get session statistics
    */
   getSessionStats() {
+    console.log('Getting session stats:', this.sessionStats);
     return {
       ...this.sessionStats,
       averageCostPerCall: this.sessionStats.totalCalls > 0 ? this.sessionStats.totalCost / this.sessionStats.totalCalls : 0

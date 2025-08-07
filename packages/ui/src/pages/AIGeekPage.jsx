@@ -109,6 +109,7 @@ const AIGeekPage = () => {
 
   const loadStatistics = async () => {
     try {
+      console.log('Loading statistics...');
       const response = await fetch('/api/ai/stats', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -117,7 +118,10 @@ const AIGeekPage = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setStats(data);
+        console.log('Received stats:', data);
+        setStats(data.data || data);
+      } else {
+        console.error('Failed to load statistics:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('Failed to load statistics:', error);
