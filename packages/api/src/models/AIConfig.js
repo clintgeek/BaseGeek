@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { getAIGeekConnection } from '../config/database.js';
 
 const aiConfigSchema = new mongoose.Schema({
   provider: {
@@ -43,4 +44,6 @@ aiConfigSchema.pre('save', function(next) {
   next();
 });
 
-export default mongoose.model('AIConfig', aiConfigSchema);
+// Use aiGeek database connection
+const aiGeekConnection = getAIGeekConnection();
+export default aiGeekConnection.model('AIConfig', aiConfigSchema);

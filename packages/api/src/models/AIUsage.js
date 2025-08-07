@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { getAIGeekConnection } from '../config/database.js';
 
 const aiUsageSchema = new mongoose.Schema({
   provider: {
@@ -80,6 +81,8 @@ const aiUsageSchema = new mongoose.Schema({
 // Compound index for efficient queries
 aiUsageSchema.index({ provider: 1, modelId: 1, userId: 1, date: 1 }, { unique: true });
 
-const AIUsage = mongoose.model('AIUsage', aiUsageSchema);
+// Use aiGeek database connection
+const aiGeekConnection = getAIGeekConnection();
+const AIUsage = aiGeekConnection.model('AIUsage', aiUsageSchema);
 
 export default AIUsage;

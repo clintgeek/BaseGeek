@@ -60,16 +60,31 @@ class AIService {
       providerUsage: {}
     };
 
-    // Load configurations from database
-    this.loadConfigurations();
-    this.seedInitialModels();
+    // Initialize configurations (will be loaded asynchronously)
+    this.initialized = false;
+    this.initializeService();
+  }
+
+  async initializeService() {
+    try {
+      await this.loadConfigurations();
+      await this.seedInitialModels();
+      this.initialized = true;
+      console.log('AI Service initialized with configurations from database');
+    } catch (error) {
+      console.error('Failed to initialize AI service:', error);
+    }
   }
 
   // Load configurations from database
   async loadConfigurations() {
     try {
+      console.log('🔍 Loading AI configurations from database...');
       const configs = await AIConfig.find({});
+      console.log(`📊 Found ${configs.length} configurations in database`);
+
       for (const config of configs) {
+        console.log(`  ${config.provider}: enabled=${config.enabled}, apiKey=${config.apiKey ? 'Set' : 'Not Set'}`);
         if (this.providers[config.provider]) {
           this.providers[config.provider].apiKey = config.apiKey;
           this.providers[config.provider].enabled = config.enabled;
@@ -81,6 +96,7 @@ class AIService {
       this.logApiKeyStatus();
     } catch (error) {
       console.error('Failed to load AI configurations:', error);
+      console.error('Error details:', error.stack);
     }
   }
 
@@ -277,6 +293,19 @@ class AIService {
    * Generic AI call method that tries providers in fallback order
    */
   async callAI(prompt, config = {}) {
+    // Wait for service to be initialized
+    if (!this.initialized) {
+      console.log('Waiting for AI service to initialize...');
+      let attempts = 0;
+      while (!this.initialized && attempts < 10) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+      }
+      if (!this.initialized) {
+        throw new Error('AI service failed to initialize');
+      }
+    }
+
     const {
       provider = this.currentProvider,
       maxTokens = this.providers[provider].maxTokens,

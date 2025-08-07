@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { getAIGeekConnection } from '../config/database.js';
 
 const aiPricingSchema = new mongoose.Schema({
   provider: {
@@ -43,6 +44,8 @@ const aiPricingSchema = new mongoose.Schema({
 // Compound index to ensure unique pricing per model
 aiPricingSchema.index({ provider: 1, modelId: 1 }, { unique: true });
 
-const AIPricing = mongoose.model('AIPricing', aiPricingSchema);
+// Use aiGeek database connection
+const aiGeekConnection = getAIGeekConnection();
+const AIPricing = aiGeekConnection.model('AIPricing', aiPricingSchema);
 
 export default AIPricing;

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { getAIGeekConnection } from '../config/database.js';
 
 const aiModelSchema = new mongoose.Schema({
   provider: {
@@ -90,6 +91,8 @@ const aiModelSchema = new mongoose.Schema({
 // Compound index to ensure unique model per provider
 aiModelSchema.index({ provider: 1, modelId: 1 }, { unique: true });
 
-const AIModel = mongoose.model('AIModel', aiModelSchema);
+// Use aiGeek database connection
+const aiGeekConnection = getAIGeekConnection();
+const AIModel = aiGeekConnection.model('AIModel', aiModelSchema);
 
 export default AIModel;

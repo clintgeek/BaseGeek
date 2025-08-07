@@ -5,6 +5,7 @@ import aiDirectorService from '../services/aiDirectorService.js';
 import aiUsageService from '../services/aiUsageService.js';
 import AIConfig from '../models/AIConfig.js';
 import AIModel from '../models/AIModel.js';
+import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 
@@ -702,5 +703,7 @@ router.post('/test', async (req, res) => {
     });
   }
 });
+
+
 
 export default router;

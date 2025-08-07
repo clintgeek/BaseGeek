@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { getAIGeekConnection } from '../config/database.js';
 
 const aiFreeTierSchema = new mongoose.Schema({
   provider: {
@@ -39,6 +40,8 @@ const aiFreeTierSchema = new mongoose.Schema({
 // Compound index to ensure unique free tier per model
 aiFreeTierSchema.index({ provider: 1, modelId: 1 }, { unique: true });
 
-const AIFreeTier = mongoose.model('AIFreeTier', aiFreeTierSchema);
+// Use aiGeek database connection
+const aiGeekConnection = getAIGeekConnection();
+const AIFreeTier = aiGeekConnection.model('AIFreeTier', aiFreeTierSchema);
 
 export default AIFreeTier;

@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.js';
 import userRoutes from './routes/user.js';
 import noteGeekRoutes from './routes/noteGeek.js';
 import aiRoutes from './routes/aiRoutes.js';
+import { connectAIGeekDB } from './config/database.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,6 +22,11 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://datageek_admin:DataGee
 mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
+
+// Connect to aiGeek database
+connectAIGeekDB()
+  .then(() => console.log('aiGeek database connected'))
+  .catch(err => console.error('aiGeek database connection error:', err));
 
 // Middleware
 const allowedOrigins = [
