@@ -25,7 +25,8 @@ import {
   Storage as StorageIcon,
   People as PeopleIcon,
   Settings as SettingsIcon,
-  Logout as LogoutIcon
+  Logout as LogoutIcon,
+  SmartToy as SmartToyIcon
 } from '@mui/icons-material';
 import useSharedAuthStore from '../store/sharedAuthStore';
 
@@ -34,8 +35,9 @@ const headerBlue = '#6098cc'; // rgb(96, 152, 204)
 
 const navItems = [
   { label: 'Home', icon: <HomeIcon />, path: '/' },
-  { label: 'Data Geek', icon: <StorageIcon />, path: '/data-geek' },
-  { label: 'User Geek', icon: <PeopleIcon />, path: '/user-geek' },
+  { label: 'Data Geek', icon: <StorageIcon />, path: '/datageek' },
+  { label: 'User Geek', icon: <PeopleIcon />, path: '/usergeek' },
+  { label: 'AI Geek', icon: <SmartToyIcon />, path: '/aigeek' },
   { label: 'Settings', icon: <SettingsIcon />, path: '/settings' }
 ];
 

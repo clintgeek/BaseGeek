@@ -3,6 +3,7 @@ import BaseGeekHome from './pages/BaseGeekHome';
 import DataGeekPage from './pages/DataGeekPage';
 import UserGeekPage from './pages/UserGeekPage';
 import Settings from './pages/Settings';
+import AIGeekPage from './pages/AIGeekPage';
 
 function AppRoutes() {
   return (
@@ -10,6 +11,7 @@ function AppRoutes() {
       <Route path="/" element={<BaseGeekHome />} />
       <Route path="/datageek" element={<DataGeekPage />} />
       <Route path="/usergeek" element={<UserGeekPage />} />
+      <Route path="/aigeek" element={<AIGeekPage />} />
       <Route path="/settings" element={<Settings />} />
     </Routes>
   );

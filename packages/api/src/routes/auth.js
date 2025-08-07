@@ -63,6 +63,10 @@ router.post('/login', authLimiter, async (req, res) => {
 
         const result = await authService.login(identifier, password, app.toLowerCase());
 
+        console.log('Auth service result:', result);
+        console.log('Result user object:', result.user);
+        console.log('Result user keys:', Object.keys(result.user));
+
         console.log('Login successful for:', {
             identifier,
             app: app.toLowerCase(),
