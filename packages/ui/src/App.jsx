@@ -9,6 +9,7 @@ import AuthCallback from './pages/AuthCallback';
 import BaseGeekHome from './pages/BaseGeekHome';
 import DataGeekPage from './pages/DataGeekPage';
 import UserGeekPage from './pages/UserGeekPage';
+import AIGeekPage from './pages/AIGeekPage';
 import Settings from './pages/Settings';
 import SharedAuthProvider from './components/SharedAuthProvider';
 
@@ -24,8 +25,9 @@ function App() {
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/" element={<RequireAuth><Layout /></RequireAuth>}>
               <Route index element={<BaseGeekHome />} />
-              <Route path="data-geek" element={<DataGeekPage />} />
-              <Route path="user-geek" element={<UserGeekPage />} />
+              <Route path="datageek" element={<DataGeekPage />} />
+              <Route path="usergeek" element={<UserGeekPage />} />
+              <Route path="aigeek" element={<AIGeekPage />} />
               <Route path="settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

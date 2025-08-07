@@ -1,39 +1,58 @@
 import axios from 'axios';
+import AIConfig from '../models/AIConfig.js';
+import AIModel from '../models/AIModel.js';
+import AIPricing from '../models/AIPricing.js';
+import aiUsageService from './aiUsageService.js';
+import AIFreeTier from '../models/AIFreeTier.js';
+import AIUsage from '../models/AIUsage.js';
 
 class AIService {
   constructor() {
     this.providers = {
-      claude: {
+      anthropic: {
         name: 'Claude 3.5 Sonnet',
-        apiKey: process.env.ANTHROPIC_API_KEY,
+        apiKey: '',
         baseURL: 'https://api.anthropic.com/v1',
         model: 'claude-3-5-sonnet-20241022',
         costPer1kTokens: 0.003,
         maxTokens: 1000,
-        temperature: 0.7
+        temperature: 0.7,
+        enabled: false
       },
       groq: {
         name: 'Groq Llama 3.1',
-        apiKey: process.env.GROQ_API_KEY,
+        apiKey: '',
         baseURL: 'https://api.groq.com/openai/v1',
         model: 'llama-3.1-8b-instant',
         costPer1kTokens: 0.00027,
         maxTokens: 1000,
-        temperature: 0.7
+        temperature: 0.7,
+        enabled: false
       },
       gemini: {
         name: 'Gemini 1.5 Flash',
-        apiKey: process.env.GEMINI_API_KEY,
+        apiKey: '',
         baseURL: 'https://generativelanguage.googleapis.com/v1beta',
         model: 'gemini-1.5-flash',
         costPer1kTokens: 0.00035,
         maxTokens: 1000,
-        temperature: 0.7
+        temperature: 0.7,
+        enabled: false
+      },
+      together: {
+        name: 'Together AI',
+        apiKey: '',
+        baseURL: 'https://api.together.xyz/v1',
+        model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free',
+        costPer1kTokens: 0.0002,
+        maxTokens: 1000,
+        temperature: 0.7,
+        enabled: false
       }
     };
 
-    this.currentProvider = 'claude';
-    this.fallbackOrder = ['claude', 'groq', 'gemini'];
+    this.currentProvider = 'anthropic';
+    this.fallbackOrder = ['anthropic', 'groq', 'gemini', 'together'];
     this.sessionStats = {
       totalCalls: 0,
       totalTokens: 0,
@@ -41,9 +60,203 @@ class AIService {
       providerUsage: {}
     };
 
-    // Log API key status
-    this.logApiKeyStatus();
+    // Load configurations from database
+    this.loadConfigurations();
+    this.seedInitialModels();
   }
+
+  // Load configurations from database
+  async loadConfigurations() {
+    try {
+      const configs = await AIConfig.find({});
+      for (const config of configs) {
+        if (this.providers[config.provider]) {
+          this.providers[config.provider].apiKey = config.apiKey;
+          this.providers[config.provider].enabled = config.enabled;
+          this.providers[config.provider].model = config.model || this.providers[config.provider].model;
+          this.providers[config.provider].maxTokens = config.maxTokens || this.providers[config.provider].maxTokens;
+          this.providers[config.provider].temperature = config.temperature || this.providers[config.provider].temperature;
+        }
+      }
+      this.logApiKeyStatus();
+    } catch (error) {
+      console.error('Failed to load AI configurations:', error);
+    }
+  }
+
+  async refreshModels(provider) {
+    try {
+      let models = [];
+
+      switch (provider) {
+        case 'groq':
+          if (this.providers.groq.apiKey) {
+            const response = await axios.get('https://api.groq.com/openai/v1/models', {
+              headers: { 'Authorization': `Bearer ${this.providers.groq.apiKey}` }
+            });
+            models = response.data.data || [];
+          }
+          break;
+
+        case 'together':
+          if (this.providers.together.apiKey) {
+            try {
+              console.log('Fetching Together.ai models...');
+              const response = await axios.get('https://api.together.xyz/v1/models', {
+                headers: { 'Authorization': `Bearer ${this.providers.together.apiKey}` },
+                timeout: 10000
+              });
+              console.log('Together.ai response:', response.data);
+              // Together.ai returns an array directly, not wrapped in data property
+              const togetherModels = response.data || [];
+              // Transform to match our expected format and save pricing
+              models = togetherModels.map(model => {
+                // Save pricing to database if available
+                if (model.pricing) {
+                  AIPricing.findOneAndUpdate(
+                    { provider: 'together', modelId: model.id },
+                    {
+                      inputPrice: model.pricing.input,
+                      outputPrice: model.pricing.output,
+                      lastUpdated: new Date(),
+                      isActive: true
+                    },
+                    { upsert: true, new: true }
+                  ).catch(error => {
+                    console.error(`Failed to save pricing for ${model.id}:`, error);
+                  });
+                }
+
+                return {
+                  id: model.id,
+                  name: model.display_name
+                };
+              });
+              console.log('Transformed Together.ai models:', models);
+            } catch (error) {
+              console.error('Together.ai API error:', error.message);
+              if (error.response) {
+                console.error('Response status:', error.response.status);
+                console.error('Response data:', error.response.data);
+              }
+              throw new Error(`Together.ai API error: ${error.message}`);
+            }
+          } else {
+            console.log('Together.ai API key not configured');
+            throw new Error('Together.ai API key not configured');
+          }
+          break;
+
+        case 'anthropic':
+          // Hardcoded models from Anthropic docs
+          models = [
+            { id: 'claude-opus-4-1-20250805', name: 'Claude Opus 4.1' },
+            { id: 'claude-opus-4-20250514', name: 'Claude Opus 4' },
+            { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4' },
+            { id: 'claude-3-7-sonnet-20250219', name: 'Claude Sonnet 3.7' },
+            { id: 'claude-3-5-sonnet-20241022', name: 'Claude Sonnet 3.5' },
+            { id: 'claude-3-5-haiku-20241022', name: 'Claude Haiku 3.5' },
+            { id: 'claude-3-haiku-20240307', name: 'Claude Haiku 3' }
+          ];
+          break;
+
+        case 'gemini':
+          // Hardcoded models for Gemini
+          models = [
+            { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
+            { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
+            { id: 'gemini-pro', name: 'Gemini Pro' }
+          ];
+          break;
+      }
+
+      // Update database with new models
+      for (const model of models) {
+        await AIModel.findOneAndUpdate(
+          { provider, modelId: model.id },
+          {
+            name: model.name,
+            lastChecked: new Date(),
+            isActive: true
+          },
+          { upsert: true, new: true }
+        );
+      }
+
+      // Mark models as inactive if they're no longer available
+      await AIModel.updateMany(
+        {
+          provider,
+          lastChecked: { $lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Older than 24 hours
+        },
+        { isActive: false }
+      );
+
+      return models;
+    } catch (error) {
+      console.error(`Failed to refresh models for ${provider}:`, error);
+      throw error;
+    }
+  }
+
+  async getModels(provider) {
+    try {
+      // Get models from database
+      const dbModels = await AIModel.find({
+        provider,
+        isActive: true
+      }).sort({ name: 1 });
+
+      return dbModels.map(model => ({
+        id: model.modelId,
+        name: model.name
+      }));
+    } catch (error) {
+      console.error(`Failed to get models for ${provider}:`, error);
+      return [];
+    }
+  }
+
+    async seedInitialModels() {
+    try {
+      const initialModels = {
+        anthropic: [
+          { id: 'claude-opus-4-1-20250805', name: 'Claude Opus 4.1' },
+          { id: 'claude-opus-4-20250514', name: 'Claude Opus 4' },
+          { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4' },
+          { id: 'claude-3-7-sonnet-20250219', name: 'Claude Sonnet 3.7' },
+          { id: 'claude-3-5-sonnet-20241022', name: 'Claude Sonnet 3.5' },
+          { id: 'claude-3-5-haiku-20241022', name: 'Claude Haiku 3.5' },
+          { id: 'claude-3-haiku-20240307', name: 'Claude Haiku 3' }
+        ],
+        gemini: [
+          { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
+          { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
+          { id: 'gemini-pro', name: 'Gemini Pro' }
+        ]
+      };
+
+      for (const [provider, models] of Object.entries(initialModels)) {
+        for (const model of models) {
+          await AIModel.findOneAndUpdate(
+            { provider, modelId: model.id },
+            {
+              name: model.name,
+              lastChecked: new Date(),
+              isActive: true
+            },
+            { upsert: true, new: true }
+          );
+        }
+      }
+
+      console.log('Initial AI models seeded successfully');
+    } catch (error) {
+      console.error('Failed to seed initial models:', error);
+    }
+  }
+
+
 
   // Log API key status for debugging
   logApiKeyStatus() {
@@ -68,12 +281,40 @@ class AIService {
       provider = this.currentProvider,
       maxTokens = this.providers[provider].maxTokens,
       temperature = this.providers[provider].temperature,
-      model = this.providers[provider].model
+      model = this.providers[provider].model,
+      userId = null,
+      appName = 'unknown'
     } = config;
+
+    // Check usage limits before making the call
+    if (userId) {
+      const modelToUse = model || this.providers[provider]?.model;
+      const availability = await aiUsageService.checkIfModelAvailable(provider, modelToUse, userId);
+
+      if (!availability.available) {
+        return {
+          success: false,
+          error: `Model not available: ${availability.reason}`,
+          usage: availability.usage
+        };
+      }
+    }
 
     // Try the specified provider first
     try {
-      return await this.callProvider(provider, prompt, { maxTokens, temperature, model });
+      const result = await this.callProvider(provider, prompt, { maxTokens, temperature, model });
+
+      // Track usage if we have a userId
+      if (userId) {
+        const modelToUse = model || this.providers[provider]?.model;
+        await aiUsageService.trackUsage(provider, modelToUse, userId, {
+          inputTokens: result.inputTokens || 0,
+          outputTokens: result.outputTokens || 0,
+          requests: 1
+        });
+      }
+
+      return result;
     } catch (error) {
       console.log(`Primary provider ${provider} failed, trying fallbacks...`);
 
@@ -81,7 +322,19 @@ class AIService {
       for (const fallbackProvider of this.fallbackOrder) {
         if (fallbackProvider !== provider) {
           try {
-            return await this.callProvider(fallbackProvider, prompt, { maxTokens, temperature });
+            const result = await this.callProvider(fallbackProvider, prompt, { maxTokens, temperature });
+
+            // Track usage for fallback provider
+            if (userId) {
+              const fallbackModel = this.providers[fallbackProvider]?.model;
+              await aiUsageService.trackUsage(fallbackProvider, fallbackModel, userId, {
+                inputTokens: result.inputTokens || 0,
+                outputTokens: result.outputTokens || 0,
+                requests: 1
+              });
+            }
+
+            return result;
           } catch (fallbackError) {
             console.log(`Fallback provider ${fallbackProvider} failed:`, fallbackError.message);
           }
@@ -104,12 +357,14 @@ class AIService {
     const { maxTokens = providerConfig.maxTokens, temperature = providerConfig.temperature, model = providerConfig.model } = config;
 
     switch (provider) {
-      case 'claude':
+      case 'anthropic':
         return await this.callClaude(prompt, { maxTokens, temperature, model });
       case 'groq':
         return await this.callGroq(prompt, { maxTokens, temperature, model });
       case 'gemini':
         return await this.callGemini(prompt, { maxTokens, temperature, model });
+      case 'together':
+        return await this.callTogether(prompt, { maxTokens, temperature, model });
       default:
         throw new Error(`Unknown provider: ${provider}`);
     }
@@ -122,7 +377,7 @@ class AIService {
     const { maxTokens = 1000, temperature = 0.7, model = 'claude-3-5-sonnet-20241022' } = config;
 
     try {
-      const response = await axios.post(`${this.providers.claude.baseURL}/messages`, {
+      const response = await axios.post(`${this.providers.anthropic.baseURL}/messages`, {
         model: model,
         max_tokens: maxTokens,
         temperature: temperature,
@@ -135,14 +390,14 @@ class AIService {
       }, {
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': this.providers.claude.apiKey,
+          'x-api-key': this.providers.anthropic.apiKey,
           'anthropic-version': '2023-06-01'
         },
         timeout: 30000
       });
 
       const result = response.data.content[0].text;
-      this.updateStats('claude', response.data.usage?.input_tokens || 0, response.data.usage?.output_tokens || 0);
+      await this.updateStats('anthropic', response.data.usage?.input_tokens || 0, response.data.usage?.output_tokens || 0, model, config.appName);
 
       return result;
     } catch (error) {
@@ -177,7 +432,7 @@ class AIService {
       });
 
       const result = response.data.choices[0].message.content;
-      this.updateStats('groq', response.data.usage?.prompt_tokens || 0, response.data.usage?.completion_tokens || 0);
+      await this.updateStats('groq', response.data.usage?.prompt_tokens || 0, response.data.usage?.completion_tokens || 0, model, config.appName);
 
       return result;
     } catch (error) {
@@ -218,11 +473,51 @@ class AIService {
       });
 
       const result = response.data.candidates[0].content.parts[0].text;
-      this.updateStats('gemini', response.data.usageMetadata?.promptTokenCount || 0, response.data.usageMetadata?.candidatesTokenCount || 0);
+      await this.updateStats('gemini', response.data.usageMetadata?.promptTokenCount || 0, response.data.usageMetadata?.candidatesTokenCount || 0, model, config.appName);
 
       return result;
     } catch (error) {
       console.error('Gemini API error:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Call Together AI API
+   */
+  async callTogether(prompt, config = {}) {
+    const { maxTokens = 1000, temperature = 0.7, model = 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free' } = config;
+
+    try {
+      const response = await axios.post(`${this.providers.together.baseURL}/chat/completions`, {
+        model: model,
+        max_tokens: maxTokens,
+        temperature: temperature,
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        stream: false
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.providers.together.apiKey}`
+        },
+        timeout: 30000
+      });
+
+      const result = response.data.choices[0].message.content;
+      await this.updateStats('together', response.data.usage?.prompt_tokens || 0, response.data.usage?.completion_tokens || 0, model, config.appName);
+
+      return result;
+    } catch (error) {
+      console.error('Together AI API error:', error.message);
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
       throw error;
     }
   }
@@ -248,21 +543,102 @@ class AIService {
   /**
    * Update usage statistics
    */
-  updateStats(provider, inputTokens, outputTokens) {
+    async updateStats(provider, inputTokens, outputTokens, modelId = null, appName = 'unknown') {
     const totalTokens = inputTokens + outputTokens;
-    const cost = (totalTokens / 1000) * this.providers[provider].costPer1kTokens;
+
+    // Check if this model is free and within limits
+    let actualCost = 0;
+    let isFreeUsage = false;
+
+    if (modelId) {
+      try {
+        // Check if model is in free tier
+        const freeTier = await AIFreeTier.findOne({ provider, modelId });
+        if (freeTier?.isFree) {
+          // Check current usage for this model
+          const usage = await AIUsage.findOne({
+            provider,
+            modelId,
+            userId: 'session', // We'll need to pass actual userId
+            date: new Date().toDateString()
+          });
+
+          if (usage) {
+            // Check if we're still within free limits
+            const isWithinLimits = !usage.isAtLimit.requestsPerDay &&
+                                 !usage.isAtLimit.tokensPerDay &&
+                                 !usage.isAtLimit.requestsPerMinute &&
+                                 !usage.isAtLimit.tokensPerMinute;
+
+            if (isWithinLimits) {
+              isFreeUsage = true;
+              actualCost = 0; // Free!
+            } else {
+              // Exceeded free tier - calculate cost
+              actualCost = (totalTokens / 1000) * this.providers[provider].costPer1kTokens;
+            }
+          } else {
+            // No usage record yet - assume free
+            isFreeUsage = true;
+            actualCost = 0;
+          }
+        } else {
+          // Not a free model - always charge
+          actualCost = (totalTokens / 1000) * this.providers[provider].costPer1kTokens;
+        }
+      } catch (error) {
+        console.error('Error checking free tier status:', error);
+        // Fallback to charging
+        actualCost = (totalTokens / 1000) * this.providers[provider].costPer1kTokens;
+      }
+    } else {
+      // No modelId provided - charge normally
+      actualCost = (totalTokens / 1000) * this.providers[provider].costPer1kTokens;
+    }
 
     this.sessionStats.totalCalls++;
     this.sessionStats.totalTokens += totalTokens;
-    this.sessionStats.totalCost += cost;
+    this.sessionStats.totalCost += actualCost;
 
-    if (!this.sessionStats.providerUsage[provider]) {
-      this.sessionStats.providerUsage[provider] = { calls: 0, tokens: 0, cost: 0 };
+        if (!this.sessionStats.providerUsage[provider]) {
+      this.sessionStats.providerUsage[provider] = {
+        calls: 0,
+        tokens: 0,
+        cost: 0,
+        freeCalls: 0,
+        paidCalls: 0,
+        appUsage: {}
+      };
     }
 
     this.sessionStats.providerUsage[provider].calls++;
     this.sessionStats.providerUsage[provider].tokens += totalTokens;
-    this.sessionStats.providerUsage[provider].cost += cost;
+    this.sessionStats.providerUsage[provider].cost += actualCost;
+
+    // Track app usage
+    if (!this.sessionStats.providerUsage[provider].appUsage[appName]) {
+      this.sessionStats.providerUsage[provider].appUsage[appName] = {
+        calls: 0,
+        tokens: 0,
+        cost: 0,
+        freeCalls: 0,
+        paidCalls: 0
+      };
+    }
+
+    this.sessionStats.providerUsage[provider].appUsage[appName].calls++;
+    this.sessionStats.providerUsage[provider].appUsage[appName].tokens += totalTokens;
+    this.sessionStats.providerUsage[provider].appUsage[appName].cost += actualCost;
+
+    if (isFreeUsage) {
+      this.sessionStats.providerUsage[provider].freeCalls =
+        (this.sessionStats.providerUsage[provider].freeCalls || 0) + 1;
+      this.sessionStats.providerUsage[provider].appUsage[appName].freeCalls++;
+    } else {
+      this.sessionStats.providerUsage[provider].paidCalls =
+        (this.sessionStats.providerUsage[provider].paidCalls || 0) + 1;
+      this.sessionStats.providerUsage[provider].appUsage[appName].paidCalls++;
+    }
   }
 
   /**

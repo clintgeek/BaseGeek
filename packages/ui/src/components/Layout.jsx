@@ -53,6 +53,7 @@ export default function Layout() {
   };
 
   const handleNavigation = (path) => {
+    console.log('Navigation clicked:', path);
     navigate(path);
     setDrawerOpen(false);
   };

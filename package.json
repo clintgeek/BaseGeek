@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:ui\"",
     "dev:api": "npm run dev --workspace=@datageek/api",
-    "dev:ui": "npm run dev --workspace=@datageek/ui",
+    "dev:ui": "npm run dev --workspace=@basegeek/ui",
     "build": "npm run build --workspaces",
     "start": "npm run start --workspace=@datageek/api"
   },

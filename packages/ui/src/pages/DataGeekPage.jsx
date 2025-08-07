@@ -180,6 +180,7 @@ function PostgresStatus() {
 }
 
 export default function DataGeekPage() {
+  console.log('DataGeekPage component rendering');
   const [tab, setTab] = useState(0);
   return (
     <Box>

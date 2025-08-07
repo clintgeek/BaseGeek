@@ -5,6 +5,7 @@ import api from '../api';
 import useSharedAuthStore from '../store/sharedAuthStore.js';
 
 export default function UserGeekPage() {
+  console.log('UserGeekPage component rendering');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

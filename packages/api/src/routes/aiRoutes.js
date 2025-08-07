@@ -1,6 +1,10 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
 import aiService from '../services/aiService.js';
+import aiDirectorService from '../services/aiDirectorService.js';
+import aiUsageService from '../services/aiUsageService.js';
+import AIConfig from '../models/AIConfig.js';
+import AIModel from '../models/AIModel.js';
 
 const router = express.Router();
 
@@ -178,6 +182,365 @@ router.post('/provider', async (req, res) => {
   }
 });
 
+// GET /api/ai/models/:provider - Get available models for a provider
+router.get('/models/:provider', async (req, res) => {
+  try {
+    const { provider } = req.params;
+
+    if (!provider) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Provider is required',
+          code: 'MISSING_PROVIDER'
+        }
+      });
+    }
+
+    // Get models from database
+    const models = await aiService.getModels(provider);
+
+    res.json({
+      success: true,
+      data: {
+        provider,
+        models
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to fetch models',
+        code: 'MODELS_FETCH_ERROR',
+        details: error.message
+      }
+    });
+  }
+});
+
+// POST /api/ai/models/:provider/refresh - Refresh models for a provider
+router.post('/models/:provider/refresh', async (req, res) => {
+  try {
+    const { provider } = req.params;
+
+    if (!provider) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Provider is required',
+          code: 'MISSING_PROVIDER'
+        }
+      });
+    }
+
+    // Check if API key is configured
+    const providerConfig = aiService.providers[provider];
+    if (!providerConfig || !providerConfig.apiKey) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: `${provider} API key is not configured`,
+          code: 'API_KEY_NOT_CONFIGURED'
+        }
+      });
+    }
+
+    console.log(`Refreshing models for ${provider}...`);
+
+    // Refresh models from provider API
+    const models = await aiService.refreshModels(provider);
+
+    console.log(`Successfully refreshed ${models.length} models for ${provider}`);
+
+    res.json({
+      success: true,
+      data: {
+        provider,
+        models,
+        message: `Models refreshed successfully for ${provider}`
+      }
+    });
+
+  } catch (error) {
+    console.error(`Error refreshing models for ${req.params.provider}:`, error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: `Failed to refresh ${req.params.provider} models: ${error.message}`,
+        code: 'MODELS_REFRESH_ERROR',
+        details: error.message
+      }
+    });
+  }
+});
+
+// GET /api/ai/director/models - Get comprehensive model information
+router.get('/director/models', async (req, res) => {
+  try {
+    console.log('AI Director models endpoint called');
+    const result = await aiDirectorService.collectModelInformation();
+
+    console.log('AI Director result success:', result.success);
+    console.log('AI Director result data keys:', result.data ? Object.keys(result.data) : 'No data');
+
+    if (result.success) {
+      res.json({
+        success: true,
+        data: result.data
+      });
+    } else {
+      console.error('AI Director failed:', result.error);
+      res.status(500).json({
+        success: false,
+        error: {
+          message: 'Failed to collect model information',
+          code: 'DIRECTOR_MODELS_ERROR',
+          details: result.error?.details || 'Unknown error'
+        }
+      });
+    }
+  } catch (error) {
+    console.error('AI Director models endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to collect model information',
+        code: 'DIRECTOR_MODELS_ERROR',
+        details: error.message
+      }
+    });
+  }
+});
+
+// POST /api/ai/director/analyze-cost - Analyze cost for a specific prompt
+router.post('/director/analyze-cost', async (req, res) => {
+  try {
+    const { prompt, expectedResponseLength = 1000 } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Prompt is required',
+          code: 'MISSING_PROMPT'
+        }
+      });
+    }
+
+    const result = await aiDirectorService.getCostAnalysis(prompt, expectedResponseLength);
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(500).json(result);
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to analyze cost',
+        code: 'DIRECTOR_COST_ANALYSIS_ERROR',
+        details: error.message
+      }
+    });
+  }
+});
+
+// POST /api/ai/director/recommend - Get provider recommendations
+router.post('/director/recommend', async (req, res) => {
+  try {
+    const { task, budget, priority = 'cost', requirements = {} } = req.body;
+
+    if (!task) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Task description is required',
+          code: 'MISSING_TASK'
+        }
+      });
+    }
+
+    const result = await aiDirectorService.recommendProvider(task, budget, priority, requirements);
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(500).json(result);
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to get recommendations',
+        code: 'DIRECTOR_RECOMMEND_ERROR',
+        details: error.message
+      }
+    });
+  }
+});
+
+// POST /api/ai/director/seed-pricing - Seed initial pricing data
+router.post('/director/seed-pricing', async (req, res) => {
+  try {
+    await aiDirectorService.seedInitialPricing();
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Initial pricing data seeded successfully'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to seed pricing data',
+        code: 'SEED_PRICING_ERROR',
+        details: error.message
+      }
+    });
+  }
+});
+
+// POST /api/ai/director/seed-free-tier - Seed free tier information
+router.post('/director/seed-free-tier', async (req, res) => {
+  try {
+    await aiDirectorService.seedFreeTierInformation();
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Free tier information seeded successfully'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to seed free tier data',
+        code: 'SEED_FREE_TIER_ERROR',
+        details: error.message
+      }
+    });
+  }
+});
+
+// POST /api/ai/director/force-refresh - Force refresh all providers
+router.post('/director/force-refresh', async (req, res) => {
+  try {
+    const providers = ['anthropic', 'groq', 'gemini', 'together'];
+    const results = {};
+
+    for (const provider of providers) {
+      try {
+        const hasApiKey = !!aiService.providers[provider]?.apiKey;
+        const isEnabled = aiService.providers[provider]?.enabled || false;
+
+        if (hasApiKey && isEnabled) {
+          console.log(`Force refreshing ${provider}...`);
+          await aiService.refreshModels(provider);
+          results[provider] = 'success';
+        } else {
+          results[provider] = 'skipped (no API key or disabled)';
+        }
+      } catch (error) {
+        console.error(`Failed to force refresh ${provider}:`, error);
+        results[provider] = `error: ${error.message}`;
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Force refresh completed',
+        results
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to force refresh',
+        code: 'FORCE_REFRESH_ERROR',
+        details: error.message
+      }
+    });
+  }
+});
+
+// GET /api/ai/usage/:provider/:modelId - Get usage status for a specific model
+router.get('/usage/:provider/:modelId', async (req, res) => {
+  try {
+    const { provider, modelId } = req.params;
+    const userId = req.user.id;
+
+    const usageStatus = await aiUsageService.getUsageStatus(provider, modelId, userId);
+
+    if (usageStatus.success) {
+      res.json({
+        success: true,
+        data: usageStatus.usage
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: {
+          message: 'Failed to get usage status',
+          code: 'USAGE_STATUS_ERROR',
+          details: usageStatus.error
+        }
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to get usage status',
+        code: 'USAGE_STATUS_ERROR',
+        details: error.message
+      }
+    });
+  }
+});
+
+// GET /api/ai/usage/:provider - Get usage summary for a provider
+router.get('/usage/:provider', async (req, res) => {
+  try {
+    const { provider } = req.params;
+    const userId = req.user.id;
+
+    const usageSummary = await aiUsageService.getProviderUsageSummary(provider, userId);
+
+    if (usageSummary.success) {
+      res.json({
+        success: true,
+        data: usageSummary.summary
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: {
+          message: 'Failed to get usage summary',
+          code: 'USAGE_SUMMARY_ERROR',
+          details: usageSummary.error
+        }
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to get usage summary',
+        code: 'USAGE_SUMMARY_ERROR',
+        details: error.message
+      }
+    });
+  }
+});
+
 // POST /api/ai/reset-stats - Reset AI statistics
 router.post('/reset-stats', async (req, res) => {
   try {
@@ -204,20 +567,21 @@ router.post('/reset-stats', async (req, res) => {
 // GET /api/ai/config - Get AI configuration
 router.get('/config', async (req, res) => {
   try {
+    const configs = await AIConfig.find({});
     const config = {
-      anthropic: {
-        apiKey: process.env.ANTHROPIC_API_KEY ? '***' : '',
-        enabled: !!process.env.ANTHROPIC_API_KEY
-      },
-      groq: {
-        apiKey: process.env.GROQ_API_KEY ? '***' : '',
-        enabled: !!process.env.GROQ_API_KEY
-      },
-      gemini: {
-        apiKey: process.env.GEMINI_API_KEY ? '***' : '',
-        enabled: !!process.env.GEMINI_API_KEY
-      }
+      anthropic: { apiKey: '', enabled: false },
+      groq: { apiKey: '', enabled: false },
+      gemini: { apiKey: '', enabled: false },
+      together: { apiKey: '', enabled: false }
     };
+
+    // Load configurations from database
+    for (const dbConfig of configs) {
+      if (config[dbConfig.provider]) {
+        config[dbConfig.provider].apiKey = dbConfig.apiKey;
+        config[dbConfig.provider].enabled = dbConfig.enabled;
+      }
+    }
 
     res.json(config);
   } catch (error) {
@@ -234,21 +598,31 @@ router.get('/config', async (req, res) => {
 // POST /api/ai/config - Update AI configuration
 router.post('/config', async (req, res) => {
   try {
-    const { anthropic, groq, gemini } = req.body;
+    const { anthropic, groq, gemini, together } = req.body;
 
-    // Update environment variables (in production, this would be stored in database)
-    if (anthropic?.apiKey && anthropic.apiKey !== '***') {
-      process.env.ANTHROPIC_API_KEY = anthropic.apiKey;
-    }
-    if (groq?.apiKey && groq.apiKey !== '***') {
-      process.env.GROQ_API_KEY = groq.apiKey;
-    }
-    if (gemini?.apiKey && gemini.apiKey !== '***') {
-      process.env.GEMINI_API_KEY = gemini.apiKey;
+    // Update configurations in database
+    const configs = [
+      { provider: 'anthropic', ...anthropic },
+      { provider: 'groq', ...groq },
+      { provider: 'gemini', ...gemini },
+      { provider: 'together', ...together }
+    ];
+
+    for (const config of configs) {
+      if (config.apiKey && config.apiKey !== '***') {
+        await AIConfig.findOneAndUpdate(
+          { provider: config.provider },
+          {
+            apiKey: config.apiKey,
+            enabled: config.enabled || false
+          },
+          { upsert: true, new: true }
+        );
+      }
     }
 
     // Reload AI service configuration
-    aiService.logApiKeyStatus();
+    await aiService.loadConfigurations();
 
     res.json({
       success: true,
@@ -271,7 +645,7 @@ router.post('/config', async (req, res) => {
 // POST /api/ai/test - Test AI provider API key
 router.post('/test', async (req, res) => {
   try {
-    const { provider } = req.body;
+    const { provider, appName = 'test' } = req.body;
 
     if (!provider) {
       return res.status(400).json({
@@ -283,15 +657,28 @@ router.post('/test', async (req, res) => {
       });
     }
 
+    // Check if API key is configured
+    const providerConfig = aiService.providers[provider];
+    if (!providerConfig || !providerConfig.apiKey) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: `${provider} API key is not configured`,
+          code: 'API_KEY_NOT_CONFIGURED'
+        }
+      });
+    }
+
     // Test the provider with a simple prompt
     const testPrompt = 'Hello, this is a test message. Please respond with "OK" if you receive this.';
-    const result = await aiService.callProvider(provider, testPrompt, { maxTokens: 10 });
+    const result = await aiService.callProvider(provider, testPrompt, { maxTokens: 10, appName });
 
     if (result && result.toLowerCase().includes('ok')) {
       res.json({
         success: true,
         data: {
-          message: `${provider} API key is valid`
+          message: `${provider} API key is valid`,
+          appName
         }
       });
     } else {
