@@ -50,8 +50,8 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=8987
-    ports:
-      - "8987:8987"
+    expose:
+      - "8987"
     depends_on:
       - mongodb
       - redis
@@ -70,8 +70,23 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=8988
+    expose:
+      - "8988"
+    networks:
+      - datageek_network
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: basegeek_nginx
     ports:
-      - "8988:8988"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - basegeek_app
+      - basegeek_ui
     networks:
       - datageek_network
     restart: unless-stopped

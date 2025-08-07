@@ -1,4 +1,4 @@
-const axios = require('axios');
+import axios from 'axios';
 
 class AIService {
   constructor() {
@@ -76,7 +76,7 @@ class AIService {
       return await this.callProvider(provider, prompt, { maxTokens, temperature, model });
     } catch (error) {
       console.log(`Primary provider ${provider} failed, trying fallbacks...`);
-      
+
       // Try fallback providers
       for (const fallbackProvider of this.fallbackOrder) {
         if (fallbackProvider !== provider) {
@@ -87,7 +87,7 @@ class AIService {
           }
         }
       }
-      
+
       throw new Error('All AI providers failed');
     }
   }
@@ -120,7 +120,7 @@ class AIService {
    */
   async callClaude(prompt, config = {}) {
     const { maxTokens = 1000, temperature = 0.7, model = 'claude-3-5-sonnet-20241022' } = config;
-    
+
     try {
       const response = await axios.post(`${this.providers.claude.baseURL}/messages`, {
         model: model,
@@ -143,7 +143,7 @@ class AIService {
 
       const result = response.data.content[0].text;
       this.updateStats('claude', response.data.usage?.input_tokens || 0, response.data.usage?.output_tokens || 0);
-      
+
       return result;
     } catch (error) {
       console.error('Claude API error:', error.message);
@@ -156,7 +156,7 @@ class AIService {
    */
   async callGroq(prompt, config = {}) {
     const { maxTokens = 1000, temperature = 0.7, model = 'llama-3.1-8b-instant' } = config;
-    
+
     try {
       const response = await axios.post(`${this.providers.groq.baseURL}/chat/completions`, {
         model: model,
@@ -178,7 +178,7 @@ class AIService {
 
       const result = response.data.choices[0].message.content;
       this.updateStats('groq', response.data.usage?.prompt_tokens || 0, response.data.usage?.completion_tokens || 0);
-      
+
       return result;
     } catch (error) {
       console.error('Groq API error:', error.message);
@@ -191,7 +191,7 @@ class AIService {
    */
   async callGemini(prompt, config = {}) {
     const { maxTokens = 1000, temperature = 0.7, model = 'gemini-1.5-flash' } = config;
-    
+
     try {
       const response = await axios.post(`${this.providers.gemini.baseURL}/models/${model}:generateContent`, {
         contents: [
@@ -219,7 +219,7 @@ class AIService {
 
       const result = response.data.candidates[0].content.parts[0].text;
       this.updateStats('gemini', response.data.usageMetadata?.promptTokenCount || 0, response.data.usageMetadata?.candidatesTokenCount || 0);
-      
+
       return result;
     } catch (error) {
       console.error('Gemini API error:', error.message);
@@ -237,7 +237,7 @@ class AIService {
       if (!jsonMatch) {
         throw new Error('No JSON found in response');
       }
-      
+
       return JSON.parse(jsonMatch[0]);
     } catch (error) {
       console.error('Failed to parse AI response:', error.message);
@@ -251,15 +251,15 @@ class AIService {
   updateStats(provider, inputTokens, outputTokens) {
     const totalTokens = inputTokens + outputTokens;
     const cost = (totalTokens / 1000) * this.providers[provider].costPer1kTokens;
-    
+
     this.sessionStats.totalCalls++;
     this.sessionStats.totalTokens += totalTokens;
     this.sessionStats.totalCost += cost;
-    
+
     if (!this.sessionStats.providerUsage[provider]) {
       this.sessionStats.providerUsage[provider] = { calls: 0, tokens: 0, cost: 0 };
     }
-    
+
     this.sessionStats.providerUsage[provider].calls++;
     this.sessionStats.providerUsage[provider].tokens += totalTokens;
     this.sessionStats.providerUsage[provider].cost += cost;
@@ -302,10 +302,10 @@ class AIService {
    * Get available providers
    */
   getAvailableProviders() {
-    return Object.keys(this.providers).filter(provider => 
+    return Object.keys(this.providers).filter(provider =>
       this.providers[provider].apiKey && this.providers[provider].apiKey.length > 10
     );
   }
 }
 
-module.exports = new AIService();
+export default new AIService();

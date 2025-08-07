@@ -8,7 +8,7 @@ import postgresRoutes from './routes/postgres.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/user.js';
 import noteGeekRoutes from './routes/noteGeek.js';
-import aiRoutes from './routes/aiRoutes.js';
+// import aiRoutes from './routes/aiRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -80,7 +80,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notes', noteGeekRoutes);
-app.use('/api/ai', aiRoutes);
+// app.use('/api/ai', aiRoutes);
 app.use('/api/mongo', mongoRoutes);
 app.use('/api/redis', redisRoutes);
 app.use('/api/postgres', postgresRoutes);

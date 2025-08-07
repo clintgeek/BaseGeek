@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import { authenticateToken } from '../middleware/auth.js';
+import aiService from '../services/aiService.js';
+
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
-const aiService = require('../services/aiService');
 
 // Apply authentication to all routes
 router.use(authenticateToken);
@@ -315,4 +316,4 @@ router.post('/test', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
