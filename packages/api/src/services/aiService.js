@@ -15,7 +15,7 @@ class AIService {
         baseURL: 'https://api.anthropic.com/v1',
         model: 'claude-3-5-sonnet-20241022',
         costPer1kTokens: 0.003,
-        maxTokens: 1000,
+        maxTokens: 4000,
         temperature: 0.7,
         enabled: false
       },
@@ -25,7 +25,7 @@ class AIService {
         baseURL: 'https://api.groq.com/openai/v1',
         model: 'llama-3.1-8b-instant',
         costPer1kTokens: 0.00027,
-        maxTokens: 1000,
+        maxTokens: 4000,
         temperature: 0.7,
         enabled: false
       },
@@ -35,7 +35,7 @@ class AIService {
         baseURL: 'https://generativelanguage.googleapis.com/v1beta',
         model: 'gemini-1.5-flash',
         costPer1kTokens: 0.00035,
-        maxTokens: 1000,
+        maxTokens: 4000,
         temperature: 0.7,
         enabled: false
       },
@@ -45,14 +45,14 @@ class AIService {
         baseURL: 'https://api.together.xyz/v1',
         model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free',
         costPer1kTokens: 0.0002,
-        maxTokens: 1000,
+        maxTokens: 4000,
         temperature: 0.7,
         enabled: false
       }
     };
 
-    this.currentProvider = 'anthropic';
-    this.fallbackOrder = ['anthropic', 'groq', 'gemini', 'together'];
+    this.currentProvider = 'groq';
+    this.fallbackOrder = ['groq', 'together', 'gemini', 'anthropic'];
     this.sessionStats = {
       totalCalls: 0,
       totalTokens: 0,
@@ -333,6 +333,9 @@ class AIService {
     try {
       const result = await this.callProvider(provider, prompt, { maxTokens, temperature, model });
 
+      // Track usage in session stats
+      await this.updateStats(provider, result.inputTokens || 0, result.outputTokens || 0, model, appName);
+
       // Track usage if we have a userId
       if (userId) {
         const modelToUse = model || this.providers[provider]?.model;
@@ -343,7 +346,7 @@ class AIService {
         });
       }
 
-      return result;
+      return result.content;
     } catch (error) {
       console.log(`Primary provider ${provider} failed, trying fallbacks...`);
 
@@ -352,6 +355,9 @@ class AIService {
         if (fallbackProvider !== provider) {
           try {
             const result = await this.callProvider(fallbackProvider, prompt, { maxTokens, temperature });
+
+            // Track usage in session stats for fallback
+            await this.updateStats(fallbackProvider, result.inputTokens || 0, result.outputTokens || 0, this.providers[fallbackProvider]?.model, appName);
 
             // Track usage for fallback provider
             if (userId) {
@@ -363,7 +369,7 @@ class AIService {
               });
             }
 
-            return result;
+            return result.content;
           } catch (fallbackError) {
             console.log(`Fallback provider ${fallbackProvider} failed:`, fallbackError.message);
           }
@@ -426,9 +432,12 @@ class AIService {
       });
 
       const result = response.data.content[0].text;
-      await this.updateStats('anthropic', response.data.usage?.input_tokens || 0, response.data.usage?.output_tokens || 0, model, config.appName);
 
-      return result;
+      return {
+        content: result,
+        inputTokens: response.data.usage?.input_tokens || 0,
+        outputTokens: response.data.usage?.output_tokens || 0
+      };
     } catch (error) {
       console.error('Claude API error:', error.message);
       throw error;
@@ -461,9 +470,12 @@ class AIService {
       });
 
       const result = response.data.choices[0].message.content;
-      await this.updateStats('groq', response.data.usage?.prompt_tokens || 0, response.data.usage?.completion_tokens || 0, model, config.appName);
 
-      return result;
+      return {
+        content: result,
+        inputTokens: response.data.usage?.prompt_tokens || 0,
+        outputTokens: response.data.usage?.completion_tokens || 0
+      };
     } catch (error) {
       console.error('Groq API error:', error.message);
       throw error;
@@ -502,9 +514,12 @@ class AIService {
       });
 
       const result = response.data.candidates[0].content.parts[0].text;
-      await this.updateStats('gemini', response.data.usageMetadata?.promptTokenCount || 0, response.data.usageMetadata?.candidatesTokenCount || 0, model, config.appName);
 
-      return result;
+      return {
+        content: result,
+        inputTokens: response.data.usageMetadata?.promptTokenCount || 0,
+        outputTokens: response.data.usageMetadata?.candidatesTokenCount || 0
+      };
     } catch (error) {
       console.error('Gemini API error:', error.message);
       throw error;
@@ -538,9 +553,12 @@ class AIService {
       });
 
       const result = response.data.choices[0].message.content;
-      await this.updateStats('together', response.data.usage?.prompt_tokens || 0, response.data.usage?.completion_tokens || 0, model, config.appName);
 
-      return result;
+      return {
+        content: result,
+        inputTokens: response.data.usage?.prompt_tokens || 0,
+        outputTokens: response.data.usage?.completion_tokens || 0
+      };
     } catch (error) {
       console.error('Together AI API error:', error.message);
       if (error.response) {
