@@ -37,8 +37,10 @@ const allowedOrigins = [
   'https://basegeek.clintgeek.com',  // Production domain
   'https://notegeek.clintgeek.com',  // NoteGeek production
   'https://fitnessgeek.clintgeek.com',  // FitnessGeek production
+  'https://storygeek.clintgeek.com',  // StoryGeek production
   'http://192.168.1.17:5173',  // Local network access
-  'http://192.168.1.17:5174'   // Local network access (alternative port)
+  'http://192.168.1.17:5174',   // Local network access (alternative port)
+  'http://192.168.1.17:9977'   // StoryGeek local network access
 ];
 
 app.use(cors({
