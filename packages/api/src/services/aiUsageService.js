@@ -3,8 +3,8 @@ import AIFreeTier from '../models/AIFreeTier.js';
 
 class AIUsageService {
   constructor() {
-    this.nearLimitThreshold = 0.8; // 80% of limit
-    this.atLimitThreshold = 0.95; // 95% of limit
+    this.nearLimitThreshold = 80; // 80% of limit
+    this.atLimitThreshold = 95; // 95% of limit
   }
 
   async trackUsage(provider, modelId, userId, requestData = {}) {
