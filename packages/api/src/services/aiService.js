@@ -336,15 +336,14 @@ class AIService {
       // Track usage in session stats
       await this.updateStats(provider, result.inputTokens || 0, result.outputTokens || 0, model, appName);
 
-      // Track usage if we have a userId
-      if (userId) {
-        const modelToUse = model || this.providers[provider]?.model;
-        await aiUsageService.trackUsage(provider, modelToUse, userId, {
-          inputTokens: result.inputTokens || 0,
-          outputTokens: result.outputTokens || 0,
-          requests: 1
-        });
-      }
+      // Track usage (use session-level tracking if no userId provided)
+      const trackingUserId = userId || 'session';
+      const modelToUse = model || this.providers[provider]?.model;
+      await aiUsageService.trackUsage(provider, modelToUse, trackingUserId, {
+        inputTokens: result.inputTokens || 0,
+        outputTokens: result.outputTokens || 0,
+        requests: 1
+      });
 
       return result.content;
     } catch (error) {
@@ -359,15 +358,14 @@ class AIService {
             // Track usage in session stats for fallback
             await this.updateStats(fallbackProvider, result.inputTokens || 0, result.outputTokens || 0, this.providers[fallbackProvider]?.model, appName);
 
-            // Track usage for fallback provider
-            if (userId) {
-              const fallbackModel = this.providers[fallbackProvider]?.model;
-              await aiUsageService.trackUsage(fallbackProvider, fallbackModel, userId, {
-                inputTokens: result.inputTokens || 0,
-                outputTokens: result.outputTokens || 0,
-                requests: 1
-              });
-            }
+            // Track usage for fallback provider (use session-level tracking if no userId provided)
+            const fallbackModel = this.providers[fallbackProvider]?.model;
+            const fallbackTrackingUserId = userId || 'session';
+            await aiUsageService.trackUsage(fallbackProvider, fallbackModel, fallbackTrackingUserId, {
+              inputTokens: result.inputTokens || 0,
+              outputTokens: result.outputTokens || 0,
+              requests: 1
+            });
 
             return result.content;
           } catch (fallbackError) {

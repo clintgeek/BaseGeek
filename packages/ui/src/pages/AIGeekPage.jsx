@@ -188,13 +188,15 @@ const AIGeekPage = () => {
   const loadUsageData = async () => {
     try {
       setUsageLoading(true);
+      console.log('Loading usage data...');
       // Only track providers with free tiers
       const providers = ['groq', 'together', 'gemini'];
       const usageSummary = {};
 
       for (const provider of providers) {
         try {
-          const response = await fetch(`/api/ai/usage/${provider}`, {
+          // Use session-level tracking
+          const response = await fetch(`/api/ai/usage/${provider}?userId=session`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
@@ -203,13 +205,17 @@ const AIGeekPage = () => {
 
           if (response.ok) {
             const data = await response.json();
+            console.log(`Usage data for ${provider}:`, data);
             usageSummary[provider] = data.data;
+          } else {
+            console.error(`Failed to load usage for ${provider}:`, response.status, response.statusText);
           }
         } catch (error) {
           console.log(`Failed to load usage for ${provider}:`, error);
         }
       }
 
+      console.log('Final usage summary:', usageSummary);
       setUsageData(usageSummary);
     } catch (error) {
       setError(`Failed to load usage data: ${error.message}`);

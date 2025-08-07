@@ -511,7 +511,7 @@ router.get('/usage/:provider/:modelId', async (req, res) => {
 router.get('/usage/:provider', async (req, res) => {
   try {
     const { provider } = req.params;
-    const userId = req.user.id;
+    const userId = req.query.userId || req.user.id; // Allow session-level tracking
 
     const usageSummary = await aiUsageService.getProviderUsageSummary(provider, userId);
 
