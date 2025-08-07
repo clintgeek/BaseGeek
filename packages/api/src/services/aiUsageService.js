@@ -53,6 +53,7 @@ class AIUsageService {
 
       // Reset counters if time period has changed
       if (usage.currentMinute.timestamp.getTime() !== currentMinute.getTime()) {
+        console.log(`Resetting minute counters for ${provider}/${modelId} - old: ${usage.currentMinute.timestamp}, new: ${currentMinute}`);
         usage.currentMinute = {
           requests: 0,
           tokens: 0,
@@ -245,6 +246,12 @@ class AIUsageService {
         summary.models.push(modelSummary);
 
         // Check if any model is near or at limit
+        console.log(`Checking limits for ${record.modelId}:`, {
+          isNearLimit: record.isNearLimit,
+          isAtLimit: record.isAtLimit,
+          percentages: record.usagePercentages
+        });
+
         Object.values(record.isNearLimit).forEach(isNear => {
           if (isNear) summary.isNearAnyLimit = true;
         });
