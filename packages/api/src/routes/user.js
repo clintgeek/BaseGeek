@@ -96,6 +96,38 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 });
 
+// @desc    Create user (admin use)
+// @route   POST /api/users
+// @access  Private
+router.post('/', authenticateToken, async (req, res) => {
+    try {
+        const { username, email, password, profile } = req.body;
+        if (!username || !email || !password) {
+            return res.status(400).json({ message: 'username, email, and password are required', code: 'VALIDATION_ERROR' });
+        }
+
+        const existing = await User.findOne({ $or: [{ username }, { email: email.toLowerCase() }] });
+        if (existing) {
+            return res.status(400).json({ message: 'User already exists', code: 'USER_EXISTS' });
+        }
+
+        const user = new User({ username, email: email.toLowerCase(), password, profile: profile || {} });
+        await user.save();
+
+        res.status(201).json({
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                profile: user.profile,
+            }
+        });
+    } catch (err) {
+        console.error('Create user error:', err);
+        res.status(500).json({ message: err.message, code: 'CREATE_USER_ERROR' });
+    }
+});
+
 // @desc    Delete user
 // @route   DELETE /api/users/:id
 // @access  Private
