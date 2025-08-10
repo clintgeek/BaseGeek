@@ -111,7 +111,7 @@ router.post('/', authenticateToken, async (req, res) => {
             return res.status(400).json({ message: 'User already exists', code: 'USER_EXISTS' });
         }
 
-        const user = new User({ username, email: email.toLowerCase(), password, profile: profile || {} });
+        const user = new User({ username, email: email.toLowerCase(), passwordHash: password, profile: profile || {} });
         await user.save();
 
         res.status(201).json({
