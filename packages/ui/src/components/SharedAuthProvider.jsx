@@ -2,10 +2,14 @@ import React, { useEffect } from 'react';
 import useSharedAuthStore from '../store/sharedAuthStore';
 
 const SharedAuthProvider = ({ children, app }) => {
-    const { initialize, checkAuth } = useSharedAuthStore();
+    const { initialize, checkAuth, isAuthenticated, currentApp } = useSharedAuthStore();
 
     useEffect(() => {
         const setupAuth = async () => {
+            // Ensure current app is set before any refresh attempts inside initialize/checkAuth
+            if (!currentApp && !isAuthenticated) {
+                useSharedAuthStore.setState({ currentApp: app });
+            }
             // Try to initialize with existing token
             const initialized = await initialize(app);
 
@@ -16,7 +20,7 @@ const SharedAuthProvider = ({ children, app }) => {
         };
 
         setupAuth();
-    }, [app, initialize, checkAuth]);
+    }, [app, initialize, checkAuth, isAuthenticated, currentApp]);
 
     return children;
 };

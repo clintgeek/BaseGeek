@@ -4,6 +4,7 @@ import {
   Note as NoteIcon,
   Book as BookIcon,
   FitnessCenter as FitnessIcon,
+  AutoStories as StoryIcon,
   Circle as CircleIcon
 } from '@mui/icons-material';
 
@@ -49,6 +50,16 @@ export default function BaseGeekHome() {
       status: 'active',
       online: true, // TODO: Replace with actual health check
       url: 'https://fitnessgeek.clintgeek.com'
+    },
+    {
+      name: 'storygeek',
+      displayName: 'StoryGeek',
+      description: 'Story plotting and writing tools',
+      icon: StoryIcon,
+      color: '#e91e63',
+      status: 'active',
+      online: true, // TODO: Replace with actual health check
+      url: 'https://storygeek.clintgeek.com'
     }
   ];
 
