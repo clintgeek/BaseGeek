@@ -44,10 +44,10 @@ router.post('/login', authLimiter, async (req, res) => {
         }
 
         // Validate app
-        if (!app || !['basegeek', 'notegeek', 'bujogeek', 'fitnessgeek', 'storygeek'].includes(app.toLowerCase())) {
+        if (!app || !['basegeek', 'notegeek', 'bujogeek', 'fitnessgeek', 'storygeek', 'startgeek'].includes(app.toLowerCase())) {
             console.error('Invalid app:', {
                 app,
-                validApps: ['basegeek', 'notegeek', 'bujogeek', 'fitnessgeek', 'storygeek']
+                validApps: ['basegeek', 'notegeek', 'bujogeek', 'fitnessgeek', 'storygeek', 'startgeek']
             });
             return res.status(400).json({
                 message: 'Invalid app',

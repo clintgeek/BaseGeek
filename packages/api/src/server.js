@@ -33,11 +33,12 @@ const allowedOrigins = [
   'http://localhost:5173',    // Vite dev server
   'http://localhost:5174',    // Vite dev server (alternative port)
   'http://localhost:5001',    // Backend dev server
-  'http://localhost:3000',    // StoryGeek frontend
+  'http://localhost:3000',    // StartGeek & StoryGeek frontend
   'https://basegeek.clintgeek.com',  // Production domain
   'https://notegeek.clintgeek.com',  // NoteGeek production
   'https://fitnessgeek.clintgeek.com',  // FitnessGeek production
   'https://storygeek.clintgeek.com',  // StoryGeek production
+  'https://start.clintgeek.com',  // StartGeek production
   'http://192.168.1.17:5173',  // Local network access
   'http://192.168.1.17:5174',   // Local network access (alternative port)
   'http://192.168.1.17:9977'   // StoryGeek local network access
