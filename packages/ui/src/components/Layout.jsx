@@ -26,7 +26,8 @@ import {
   People as PeopleIcon,
   Settings as SettingsIcon,
   Logout as LogoutIcon,
-  SmartToy as SmartToyIcon
+  SmartToy as SmartToyIcon,
+  Key as KeyIcon
 } from '@mui/icons-material';
 import useSharedAuthStore from '../store/sharedAuthStore';
 
@@ -38,6 +39,7 @@ const navItems = [
   { label: 'Data Geek', icon: <StorageIcon />, path: '/datageek' },
   { label: 'User Geek', icon: <PeopleIcon />, path: '/usergeek' },
   { label: 'AI Geek', icon: <SmartToyIcon />, path: '/aigeek' },
+  { label: 'API Keys', icon: <KeyIcon />, path: '/api-keys' },
   { label: 'Settings', icon: <SettingsIcon />, path: '/settings' }
 ];
 

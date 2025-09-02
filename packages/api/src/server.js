@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.js';
 import userRoutes from './routes/user.js';
 import noteGeekRoutes from './routes/noteGeek.js';
 import aiRoutes from './routes/aiRoutes.js';
+import apiKeyRoutes from './routes/apiKeys.js';
 import { connectAIGeekDB } from './config/database.js';
 
 const app = express();
@@ -90,6 +91,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notes', noteGeekRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/api-keys', apiKeyRoutes);
 app.use('/api/mongo', mongoRoutes);
 app.use('/api/redis', redisRoutes);
 app.use('/api/postgres', postgresRoutes);

@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
+import { authenticateJWTOrAPIKey, requirePermission } from '../middleware/apiKeyAuth.js';
 import aiService from '../services/aiService.js';
 import aiDirectorService from '../services/aiDirectorService.js';
 import aiUsageService from '../services/aiUsageService.js';
@@ -9,12 +10,17 @@ import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 
-// Apply authentication to all routes
-router.use(authenticateToken);
+// Apply authentication to all routes (JWT or API key)
+// Note: Individual routes can override with specific permission requirements
+router.use(authenticateJWTOrAPIKey());
 
 // GET /api/ai/stats - Get AI service statistics
 router.get('/stats', async (req, res) => {
   try {
+    // Check permission for API key users
+    const permissionError = requirePermission(req, res, 'ai:stats');
+    if (permissionError) return;
+
     const stats = aiService.getSessionStats();
     res.json({
       success: true,
@@ -34,6 +40,10 @@ router.get('/stats', async (req, res) => {
 // POST /api/ai/call - Generic AI call endpoint
 router.post('/call', async (req, res) => {
   try {
+    // Check permission for API key users
+    const permissionError = requirePermission(req, res, 'ai:call');
+    if (permissionError) return;
+
     const { prompt, config = {} } = req.body;
     const userId = req.user.id;
 
@@ -280,6 +290,10 @@ router.post('/models/:provider/refresh', async (req, res) => {
 // GET /api/ai/director/models - Get comprehensive model information
 router.get('/director/models', async (req, res) => {
   try {
+    // Check permission for API key users
+    const permissionError = requirePermission(req, res, 'ai:director');
+    if (permissionError) return;
+
     console.log('AI Director models endpoint called');
     const result = await aiDirectorService.collectModelInformation();
 

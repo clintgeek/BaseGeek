@@ -10,6 +10,7 @@ import BaseGeekHome from './pages/BaseGeekHome';
 import DataGeekPage from './pages/DataGeekPage';
 import UserGeekPage from './pages/UserGeekPage';
 import AIGeekPage from './pages/AIGeekPage';
+import APIKeysPage from './pages/APIKeysPage';
 import Settings from './pages/Settings';
 import SharedAuthProvider from './components/SharedAuthProvider';
 
@@ -28,6 +29,7 @@ function App() {
               <Route path="datageek" element={<DataGeekPage />} />
               <Route path="usergeek" element={<UserGeekPage />} />
               <Route path="aigeek" element={<AIGeekPage />} />
+              <Route path="api-keys" element={<APIKeysPage />} />
               <Route path="settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
